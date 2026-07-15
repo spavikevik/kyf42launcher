@@ -7,5 +7,5 @@
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#B8C0CC</color>
     <color name="bar_scrim">#73000000</color>      <!-- translucent status/softkey bars -->
-    <color name="grid_scrim">#D9070B12</color>     <!-- dims wallpaper behind app grid -->
+    <color name="grid_scrim">#C60A0A18</color>     <!-- dims wallpaper behind app grid (lets mesh glow through) -->
 </resources>

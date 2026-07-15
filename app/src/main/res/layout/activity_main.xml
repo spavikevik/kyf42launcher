@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@color/bar_scrim"
+        android:background="@drawable/topbar_fade"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="3dp"
@@ -95,9 +95,12 @@
                     android:format12Hour="h:mm"
                     android:format24Hour="H:mm"
                     android:fontFamily="sans-serif-thin"
-                    android:letterSpacing="0.02"
+                    android:letterSpacing="-0.01"
                     android:textColor="@color/text_primary"
-                    android:textSize="64sp" />
+                    android:shadowColor="#40000000"
+                    android:shadowDy="2"
+                    android:shadowRadius="8"
+                    android:textSize="72sp" />
 
                 <TextClock
                     android:id="@+id/dateClock"
@@ -106,20 +109,27 @@
                     android:layout_marginTop="2dp"
                     android:format12Hour="EEE, MMM d"
                     android:format24Hour="EEE, MMM d"
-                    android:letterSpacing="0.06"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.1"
+                    android:textAllCaps="true"
                     android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Favorites dock, populated in code -->
+            <!-- Favorites dock: floating translucent island (iOS-style) -->
             <LinearLayout
                 android:id="@+id/dock"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:paddingBottom="16dp"
-                android:paddingTop="8dp" />
+                android:background="@drawable/dock_bg"
+                android:layout_marginBottom="4dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp" />
         </LinearLayout>
 
         <!-- APP GRID: hidden until center pressed on home -->
@@ -129,6 +139,7 @@
             android:layout_height="match_parent"
             android:background="@color/grid_scrim"
             android:padding="6dp"
+            android:paddingBottom="10dp"
             android:clipToPadding="false"
             android:visibility="gone"
             android:focusable="true"
@@ -139,11 +150,10 @@
     <LinearLayout
         android:id="@+id/softkeyBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="34dp"
         android:orientation="horizontal"
-        android:background="@color/bar_scrim"
-        android:paddingTop="7dp"
-        android:paddingBottom="7dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/softkey_fade">
 
         <TextView
             android:id="@+id/lsk"

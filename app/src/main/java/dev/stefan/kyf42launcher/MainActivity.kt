@@ -127,9 +127,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun signalBars(level: Int): String {
+    // Bar ramp "▂▄▆█": bars up to `level` bright, the rest dimmed.
+    private fun signalBars(level: Int): CharSequence {
         val l = level.coerceIn(0, 4)
-        return "▓".repeat(l) + "░".repeat(4 - l)
+        val s = android.text.SpannableString("▂▄▆█")
+        if (l < 4) s.setSpan(
+            android.text.style.ForegroundColorSpan(0x4DFFFFFF),
+            l, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        return s
     }
 
     // ConnectivityManager path: transport + signal work without location permission
@@ -144,12 +150,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun wifiText(caps: NetworkCapabilities): String {
+    private fun wifiText(caps: NetworkCapabilities): CharSequence {
         val dbm = caps.signalStrength   // API 29; may be SIGNAL_STRENGTH_UNSPECIFIED
-        if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) return "W▓▓▓▓"
-        @Suppress("DEPRECATION")
-        val level = WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
-        return "W" + "▓".repeat(level) + "░".repeat(4 - level)
+        val level = if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) 4
+        else @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
+        return signalBars(level)
     }
 
     private fun setupStatusBar() {
