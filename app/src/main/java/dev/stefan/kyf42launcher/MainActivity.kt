@@ -363,6 +363,9 @@ class MainActivity : AppCompatActivity() {
         val empty = notifData.isEmpty()
         notifEmpty.visibility = if (empty) View.VISIBLE else View.GONE
         notifList.visibility = if (empty) View.GONE else View.VISIBLE
+        // No actions when there's nothing to act on.
+        lsk.text = if (empty) "" else "Clear all"
+        csk.text = if (empty) "" else "OPEN"
     }
 
     private fun onNotifsChanged() {
