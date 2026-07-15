@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -107,15 +108,29 @@ class LockActivity : AppCompatActivity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                finish()
-                // No window animation: shrinks the gap where the system
-                // nav bar can flash between lock and home.
-                @Suppress("DEPRECATION")
-                overridePendingTransition(0, 0)
-            }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> unlock()
         }
         return true
+    }
+
+    private fun unlock() {
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        // If a secure system lock is set, hand off to the REAL keyguard prompt
+        // (system PIN). Security stays in the OS; our screen is just the entry.
+        if (Build.VERSION.SDK_INT >= 26 && km?.isKeyguardLocked == true && km.isDeviceSecure) {
+            km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
+                override fun onDismissSucceeded() = dismissToHome()
+                // onDismissCancelled / onDismissError: stay locked.
+            })
+        } else {
+            dismissToHome()   // no secure lock -> cosmetic dismiss
+        }
+    }
+
+    private fun dismissToHome() {
+        finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)   // no flash between lock and home
     }
 
     @Deprecated("Deprecated in Java")

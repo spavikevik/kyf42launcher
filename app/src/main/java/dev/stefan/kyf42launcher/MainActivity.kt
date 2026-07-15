@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -83,13 +84,18 @@ class MainActivity : AppCompatActivity() {
         setupStatusBar()
         hideSystemBars()
 
-        // Screen off -> pre-arm our lock screen so it's on top at wake.
-        // (As the foreground home app we're allowed to start it.)
+        // Screen off -> pre-arm our (cosmetic) lock screen for non-secure devices.
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        applyLockWallpaperOnce()
     }
 
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // Only run our cosmetic lock when there's NO secure system lock.
+            // A secure keyguard owns the top layer; our activity can't occlude it,
+            // so we defer to it (it's the real security) instead of fighting.
+            val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+            if (km?.isDeviceSecure == true) return
             try {
                 startActivity(
                     Intent(this@MainActivity, LockActivity::class.java)
@@ -97,6 +103,18 @@ class MainActivity : AppCompatActivity() {
                 )
             } catch (_: Exception) { /* BAL denied: system keyguard handles it */ }
         }
+    }
+
+    // Match the system keyguard to our theme so a secure lock still looks like ours.
+    private fun applyLockWallpaperOnce() {
+        val prefs = getSharedPreferences("kyf42", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("lock_wp_set", false)) return
+        try {
+            val wm = android.app.WallpaperManager.getInstance(this)
+            val bmp = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wallpaper)
+            wm.setBitmap(bmp, null, true, android.app.WallpaperManager.FLAG_LOCK)
+            prefs.edit().putBoolean("lock_wp_set", true).apply()
+        } catch (_: Exception) { /* SET_WALLPAPER unavailable: skip */ }
     }
 
     // --- Favorites dock: default apps + an "All apps" tile ---
