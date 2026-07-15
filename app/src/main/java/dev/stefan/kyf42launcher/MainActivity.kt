@@ -313,6 +313,7 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.GRID
         homeView.visibility = View.GONE
         appGrid.visibility = View.VISIBLE
+        appGrid.scheduleLayoutAnimation()   // replay the cascade on each open
         lsk.text = ""
         csk.text = "SELECT"
         rsk.text = "Options"

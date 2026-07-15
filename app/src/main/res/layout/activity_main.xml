@@ -238,6 +238,7 @@
             android:clipToPadding="false"
             android:clipChildren="false"
             android:visibility="gone"
+            android:layoutAnimation="@anim/grid_layout"
             android:focusable="true"
             android:descendantFocusability="afterDescendants" />
     </FrameLayout>
