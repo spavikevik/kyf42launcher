@@ -207,10 +207,7 @@ class MainActivity : AppCompatActivity() {
         val base = loadDockPkgs().ifEmpty { dockPkgs.toList() }.toMutableList()
         when {
             base.contains(pkg) -> base.remove(pkg)
-            base.size >= DOCK_MAX -> {
-                android.widget.Toast.makeText(this, "Dock full", android.widget.Toast.LENGTH_SHORT).show()
-                return
-            }
+            base.size >= DOCK_MAX -> { showReplaceChooser(pkg); return }
             else -> base.add(pkg)
         }
         saveDockPkgs(base)
@@ -394,19 +391,7 @@ class MainActivity : AppCompatActivity() {
         val pinRow = view.findViewById<TextView>(R.id.optPin)
         val pinned = dockPkgs.contains(app.packageName)   // what's currently in the dock
         pinRow.text = if (pinned) "Remove from dock" else "Pin to dock"
-        val dialog = android.app.Dialog(this).apply {
-            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-            setContentView(view)
-            window?.apply {
-                setBackgroundDrawableResource(android.R.color.transparent)
-                setGravity(android.view.Gravity.BOTTOM)
-                setLayout(
-                    android.view.WindowManager.LayoutParams.MATCH_PARENT,
-                    android.view.WindowManager.LayoutParams.WRAP_CONTENT
-                )
-                decorView.setPadding(18, 0, 18, 18)
-            }
-        }
+        val dialog = makeSheet(view)
         view.findViewById<View>(R.id.optInfo).setOnClickListener {
             startActivity(
                 Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -426,6 +411,70 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<View>(R.id.optCancel).setOnClickListener { dialog.dismiss() }
         dialog.show()
         pinRow.requestFocus()
+    }
+
+    // Bottom action-sheet dialog wrapper.
+    private fun makeSheet(view: View): android.app.Dialog =
+        android.app.Dialog(this).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            setContentView(view)
+            window?.apply {
+                setBackgroundDrawableResource(android.R.color.transparent)
+                setGravity(android.view.Gravity.BOTTOM)
+                setLayout(
+                    android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT
+                )
+                decorView.setPadding(18, 0, 18, 18)
+            }
+        }
+
+    private fun labelFor(pkg: String): String = try {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    } catch (_: Exception) { pkg }
+
+    // A focusable sheet row built in code (for dynamic lists).
+    private fun sheetRow(text: CharSequence, accent: Boolean = false): TextView {
+        val pad = (14 * resources.displayMetrics.density).toInt()
+        return TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(pad, pad, pad, pad)
+            isFocusable = true
+            setBackgroundResource(R.drawable.opt_row_bg)
+            setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    this@MainActivity,
+                    if (accent) R.color.text_secondary else R.color.text_primary
+                )
+            )
+            textSize = 15f
+            this.text = text
+        }
+    }
+
+    // Dock full: let the user choose which pinned app to replace.
+    private fun showReplaceChooser(newPkg: String) {
+        val current = loadDockPkgs().ifEmpty { dockPkgs.toList() }
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Dock full — replace which?"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+        current.forEach { pkg ->
+            val row = sheetRow(labelFor(pkg))
+            row.setOnClickListener {
+                val list = current.toMutableList()
+                list.remove(pkg); list.add(newPkg)
+                saveDockPkgs(list); buildDock(); dialog.dismiss()
+            }
+            rows.addView(row)
+        }
+        val cancel = sheetRow("Cancel", accent = true)
+        cancel.setOnClickListener { dialog.dismiss() }
+        rows.addView(cancel)
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
     }
 
     // Mask an app icon into an iOS-style squircle (rounded square).
