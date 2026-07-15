@@ -1,0 +1,19 @@
+# Gradle / Android build
+.gradle/
+build/
+app/build/
+captures/
+*.apk
+*.ap_
+*.dex
+
+# Local machine config (contains sdk.dir)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# OS
+.DS_Store

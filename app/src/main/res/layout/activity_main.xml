@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KaiOS-style shell:
+       content area (home clock  OR  app grid)  +  bottom soft-key bar. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/wallpaper">
+
+    <!-- Custom status bar (replaces the hidden system one) -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/bar_scrim"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+
+        <TextView
+            android:id="@+id/tvWifi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/tvSignal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/tvCarrier"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/tvBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:text="" />
+
+        <TextClock
+            android:id="@+id/statusClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="h:mm"
+            android:format24Hour="H:mm"
+            android:textColor="@android:color/white"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- HOME screen: clock up top, favorites dock at the bottom (KaiOS-like) -->
+        <LinearLayout
+            android:id="@+id/homeView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextClock
+                    android:id="@+id/clock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="H:mm"
+                    android:fontFamily="sans-serif-thin"
+                    android:letterSpacing="0.02"
+                    android:textColor="@color/text_primary"
+                    android:textSize="64sp" />
+
+                <TextClock
+                    android:id="@+id/dateClock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:format12Hour="EEE, MMM d"
+                    android:format24Hour="EEE, MMM d"
+                    android:letterSpacing="0.06"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Favorites dock, populated in code -->
+            <LinearLayout
+                android:id="@+id/dock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingBottom="16dp"
+                android:paddingTop="8dp" />
+        </LinearLayout>
+
+        <!-- APP GRID: hidden until center pressed on home -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/appGrid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/grid_scrim"
+            android:padding="6dp"
+            android:clipToPadding="false"
+            android:visibility="gone"
+            android:focusable="true"
+            android:descendantFocusability="afterDescendants" />
+    </FrameLayout>
+
+    <!-- SOFT-KEY BAR: LSK (F1) | SELECT (center) | RSK (F2) -->
+    <LinearLayout
+        android:id="@+id/softkeyBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/bar_scrim"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp">
+
+        <TextView
+            android:id="@+id/lsk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="start|center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="6dp"
+            android:textColor="@color/kai_orange"
+            android:textSize="12sp"
+            android:letterSpacing="0.02"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/csk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/kai_orange"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:letterSpacing="0.05"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/rsk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end|center_vertical"
+            android:paddingStart="6dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/kai_orange"
+            android:textSize="12sp"
+            android:letterSpacing="0.02"
+            android:text="" />
+    </LinearLayout>
+</LinearLayout>

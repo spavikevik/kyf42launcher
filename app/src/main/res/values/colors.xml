@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- KaiOS-faithful palette -->
+    <color name="kai_blue">#00A9E0</color>        <!-- selection -->
+    <color name="kai_blue_fill">#3300A9E0</color> <!-- 20% selection fill -->
+    <color name="kai_orange">#F58220</color>       <!-- soft keys -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B8C0CC</color>
+    <color name="bar_scrim">#73000000</color>      <!-- translucent status/softkey bars -->
+    <color name="grid_scrim">#D9070B12</color>     <!-- dims wallpaper behind app grid -->
+</resources>
