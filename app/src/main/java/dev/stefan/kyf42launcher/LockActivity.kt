@@ -35,13 +35,20 @@ class LockActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock)
 
-        // Sit above the system keyguard when it's set to None/Swipe.
+        // Show over the keyguard and light the screen when armed.
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
+            setTurnScreenOn(true)
         } else {
             @Suppress("DEPRECATION")
-            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
         }
+
+        // If the keyguard is dismissed by any means, drop our screen.
+        registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
 
         lockWifi = findViewById(R.id.lockWifi)
         lockBattery = findViewById(R.id.lockBattery)
@@ -58,6 +65,10 @@ class LockActivity : AppCompatActivity() {
         try { connectivity?.registerDefaultNetworkCallback(netCallback) } catch (_: Exception) {}
 
         hideSystemBars()
+    }
+
+    private val userPresentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) { finish() }
     }
 
     private val batteryReceiver = object : BroadcastReceiver() {
@@ -138,6 +149,7 @@ class LockActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try { unregisterReceiver(userPresentReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
     }

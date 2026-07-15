@@ -104,11 +104,10 @@ class MainActivity : AppCompatActivity() {
 
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            // Only run our cosmetic lock when there's NO secure system lock.
-            // A secure keyguard owns the top layer; our activity can't occlude it,
-            // so we defer to it (it's the real security) instead of fighting.
-            val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-            if (km?.isDeviceSecure == true) return
+            // Arm our lock screen on every screen-off. It shows over the keyguard
+            // (setShowWhenLocked); on a secure device, pressing OK raises the real
+            // system PIN via requestDismissKeyguard. Process stays alive via the
+            // NotificationListener anchor so this receiver survives.
             try {
                 startActivity(
                     Intent(this@MainActivity, LockActivity::class.java)
