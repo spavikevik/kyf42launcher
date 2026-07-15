@@ -227,20 +227,45 @@
                 android:paddingBottom="7dp" />
         </LinearLayout>
 
-        <!-- APP GRID: hidden until center pressed on home -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/appGrid"
+        <!-- APP GRID (+ T9 search bar): hidden until opened from home -->
+        <LinearLayout
+            android:id="@+id/gridContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:orientation="vertical"
             android:background="@color/grid_scrim"
-            android:padding="8dp"
-            android:paddingBottom="10dp"
-            android:clipToPadding="false"
-            android:clipChildren="false"
-            android:visibility="gone"
-            android:layoutAnimation="@anim/grid_layout"
-            android:focusable="true"
-            android:descendantFocusability="afterDescendants" />
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/gridSearch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/infocard_bg"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.15"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/appGrid"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:paddingBottom="10dp"
+                android:clipToPadding="false"
+                android:clipChildren="false"
+                android:layoutAnimation="@anim/grid_layout"
+                android:focusable="true"
+                android:descendantFocusability="afterDescendants" />
+        </LinearLayout>
 
         <!-- NOTIFICATIONS CENTER: pulled down from home -->
         <LinearLayout

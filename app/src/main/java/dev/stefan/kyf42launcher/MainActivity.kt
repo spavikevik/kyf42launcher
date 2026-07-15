@@ -32,8 +32,13 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-/** One launchable app. */
-data class AppInfo(val label: String, val packageName: String, val icon: Drawable)
+/** One launchable app. `t9` = space-joined per-word digit strings for keypad search. */
+data class AppInfo(
+    val label: String,
+    val packageName: String,
+    val icon: Drawable,
+    val t9: String = ""
+)
 
 /** Status-bar level icons (0..4), shared by home and lock screens. */
 internal val WIFI_ICONS = intArrayOf(
@@ -67,8 +72,13 @@ class MainActivity : AppCompatActivity() {
     private var connectivity: ConnectivityManager? = null
     private lateinit var widgets: HomeWidgets
 
+    private lateinit var gridContainer: View
+    private lateinit var gridSearch: TextView
+
     private var screen = Screen.HOME
-    private val apps = mutableListOf<AppInfo>()
+    private val apps = mutableListOf<AppInfo>()        // all launchable apps
+    private val gridApps = mutableListOf<AppInfo>()    // currently shown (T9-filtered)
+    private var t9query = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,8 +95,10 @@ class MainActivity : AppCompatActivity() {
         tvCarrier = findViewById(R.id.tvCarrier)
         tvBattery = findViewById(R.id.tvBattery)
 
+        gridContainer = findViewById(R.id.gridContainer)
+        gridSearch = findViewById(R.id.gridSearch)
         appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns, roomy spacing
-        appGrid.adapter = AppAdapter(apps) { app -> launchApp(app) }
+        appGrid.adapter = AppAdapter(gridApps) { app -> launchApp(app) }
 
         notifPanel = findViewById(R.id.notifPanel)
         notifList = findViewById(R.id.notifList)
@@ -287,16 +299,51 @@ class MainActivity : AppCompatActivity() {
         for (ri in resolved) {
             val pkg = ri.activityInfo.packageName
             if (pkg == packageName) continue          // hide ourselves
+            val label = ri.loadLabel(packageManager).toString()
             apps.add(
                 AppInfo(
-                    label = ri.loadLabel(packageManager).toString(),
+                    label = label,
                     packageName = pkg,
-                    icon = squircle(ri.loadIcon(packageManager))
+                    icon = squircle(ri.loadIcon(packageManager)),
+                    t9 = t9of(label)
                 )
             )
         }
         apps.sortBy { it.label.lowercase() }
+        gridApps.clear()
+        gridApps.addAll(apps)
         appGrid.adapter?.notifyDataSetChanged()
+    }
+
+    // Map a label to space-joined per-word digit strings (a-c=2 … w-z=9; others dropped).
+    private fun t9of(label: String): String =
+        label.lowercase().split(Regex("\\s+")).joinToString(" ") { word ->
+            word.mapNotNull { t9digit(it) }.joinToString("")
+        }
+
+    private fun t9digit(c: Char): Char? = when (c) {
+        in 'a'..'c' -> '2'; in 'd'..'f' -> '3'; in 'g'..'i' -> '4'
+        in 'j'..'l' -> '5'; in 'm'..'o' -> '6'; in 'p'..'s' -> '7'
+        in 't'..'v' -> '8'; in 'w'..'z' -> '9'
+        else -> null
+    }
+
+    private fun applyT9() {
+        gridApps.clear()
+        if (t9query.isEmpty()) {
+            gridApps.addAll(apps)
+            gridSearch.visibility = View.GONE
+        } else {
+            gridApps.addAll(apps.filter { app ->
+                app.t9.split(' ').any { it.startsWith(t9query) }
+            })
+            gridSearch.text = "${t9query}  ·  ${gridApps.size}"
+            gridSearch.visibility = View.VISIBLE
+        }
+        appGrid.adapter?.notifyDataSetChanged()
+        appGrid.post {
+            appGrid.layoutManager?.findViewByPosition(0)?.requestFocus()
+        }
     }
 
     private fun launchApp(app: AppInfo) {
@@ -316,7 +363,7 @@ class MainActivity : AppCompatActivity() {
     private fun showHome() {
         screen = Screen.HOME
         homeView.visibility = View.VISIBLE
-        appGrid.visibility = View.GONE
+        gridContainer.visibility = View.GONE
         notifPanel.visibility = View.GONE
         val n = LockListenerService.instance?.current()?.size ?: 0
         lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
@@ -329,7 +376,12 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.GRID
         homeView.visibility = View.GONE
         notifPanel.visibility = View.GONE
-        appGrid.visibility = View.VISIBLE
+        gridContainer.visibility = View.VISIBLE
+        // Reset any prior T9 search.
+        t9query = ""
+        gridApps.clear(); gridApps.addAll(apps)
+        gridSearch.visibility = View.GONE
+        appGrid.adapter?.notifyDataSetChanged()
         appGrid.scheduleLayoutAnimation()   // replay the cascade on each open
         lsk.text = ""
         csk.text = "SELECT"
@@ -344,7 +396,7 @@ class MainActivity : AppCompatActivity() {
     private fun showNotifications() {
         screen = Screen.NOTIF
         homeView.visibility = View.GONE
-        appGrid.visibility = View.GONE
+        gridContainer.visibility = View.GONE
         notifPanel.visibility = View.VISIBLE
         lsk.text = "Clear all"
         csk.text = "OPEN"
@@ -395,6 +447,15 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             Screen.GRID -> when (keyCode) {
+                // Digit keys drive T9 search; # clears it.
+                in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                    t9query += ('0' + (keyCode - KeyEvent.KEYCODE_0))
+                    applyT9(); return true
+                }
+                KeyEvent.KEYCODE_POUND -> {
+                    if (t9query.isNotEmpty()) { t9query = ""; applyT9() }
+                    return true
+                }
                 // F2 = right soft key = Options (TODO: app info / uninstall menu)
                 KeyEvent.KEYCODE_F2 -> return true
             }
@@ -414,6 +475,12 @@ class MainActivity : AppCompatActivity() {
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        // In the grid, Back first deletes the last T9 digit; only exits when empty.
+        if (screen == Screen.GRID && t9query.isNotEmpty()) {
+            t9query = t9query.dropLast(1)
+            applyT9()
+            return
+        }
         if (screen == Screen.GRID || screen == Screen.NOTIF) showHome()
         // else: stay on home (do nothing)
     }
