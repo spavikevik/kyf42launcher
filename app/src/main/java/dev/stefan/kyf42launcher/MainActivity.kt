@@ -39,8 +39,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var lsk: TextView
     private lateinit var csk: TextView
     private lateinit var rsk: TextView
-    private lateinit var tvWifi: TextView
-    private lateinit var tvSignal: TextView
+    private lateinit var ivWifi: ImageView
+    private lateinit var ivSignal: ImageView
     private lateinit var tvCarrier: TextView
     private lateinit var tvBattery: TextView
     private var telephony: TelephonyManager? = null
@@ -59,8 +59,8 @@ class MainActivity : AppCompatActivity() {
         lsk = findViewById(R.id.lsk)
         csk = findViewById(R.id.csk)
         rsk = findViewById(R.id.rsk)
-        tvWifi = findViewById(R.id.tvWifi)
-        tvSignal = findViewById(R.id.tvSignal)
+        ivWifi = findViewById(R.id.ivWifi)
+        ivSignal = findViewById(R.id.ivSignal)
         tvCarrier = findViewById(R.id.tvCarrier)
         tvBattery = findViewById(R.id.tvBattery)
 
@@ -123,19 +123,9 @@ class MainActivity : AppCompatActivity() {
 
     private val signalListener = object : PhoneStateListener() {
         override fun onSignalStrengthsChanged(s: SignalStrength) {
-            tvSignal.text = signalBars(s.level)   // s.level is 0..4 (API 23+)
+            ivSignal.setImageResource(CELL_ICONS[s.level.coerceIn(0, 4)])
+            ivSignal.visibility = View.VISIBLE
         }
-    }
-
-    // Bar ramp "▂▄▆█": bars up to `level` bright, the rest dimmed.
-    private fun signalBars(level: Int): CharSequence {
-        val l = level.coerceIn(0, 4)
-        val s = android.text.SpannableString("▂▄▆█")
-        if (l < 4) s.setSpan(
-            android.text.style.ForegroundColorSpan(0x4DFFFFFF),
-            l, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        return s
     }
 
     // ConnectivityManager path: transport + signal work without location permission
@@ -143,18 +133,34 @@ class MainActivity : AppCompatActivity() {
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-            runOnUiThread { tvWifi.text = if (onWifi) wifiText(caps) else "" }
+            runOnUiThread {
+                if (onWifi) {
+                    ivWifi.setImageResource(WIFI_ICONS[wifiLevel(caps)])
+                    ivWifi.visibility = View.VISIBLE
+                } else ivWifi.visibility = View.GONE
+            }
         }
         override fun onLost(network: Network) {
-            runOnUiThread { tvWifi.text = "" }
+            runOnUiThread { ivWifi.visibility = View.GONE }
         }
     }
 
-    private fun wifiText(caps: NetworkCapabilities): CharSequence {
+    private fun wifiLevel(caps: NetworkCapabilities): Int {
         val dbm = caps.signalStrength   // API 29; may be SIGNAL_STRENGTH_UNSPECIFIED
-        val level = if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) 4
-        else @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
-        return signalBars(level)
+        if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) return 4
+        @Suppress("DEPRECATION")
+        return WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
+    }
+
+    companion object {
+        private val WIFI_ICONS = intArrayOf(
+            R.drawable.ic_wifi_0, R.drawable.ic_wifi_1, R.drawable.ic_wifi_2,
+            R.drawable.ic_wifi_3, R.drawable.ic_wifi_4
+        )
+        private val CELL_ICONS = intArrayOf(
+            R.drawable.ic_cell_0, R.drawable.ic_cell_1, R.drawable.ic_cell_2,
+            R.drawable.ic_cell_3, R.drawable.ic_cell_4
+        )
     }
 
     private fun setupStatusBar() {
@@ -165,14 +171,14 @@ class MainActivity : AppCompatActivity() {
         telephony = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
         val sim = telephony?.simState ?: TelephonyManager.SIM_STATE_UNKNOWN
         if (sim == TelephonyManager.SIM_STATE_ABSENT || sim == TelephonyManager.SIM_STATE_UNKNOWN) {
-            tvSignal.text = ""
+            ivSignal.visibility = View.GONE
             tvCarrier.text = "No SIM"
         } else {
             tvCarrier.text = telephony?.networkOperatorName ?: ""
             try {
                 telephony?.listen(signalListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
             } catch (e: SecurityException) {
-                tvSignal.text = ""   // no READ_PHONE_STATE -> hide signal
+                ivSignal.visibility = View.GONE   // no READ_PHONE_STATE -> hide signal
             }
         }
 

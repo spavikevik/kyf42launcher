@@ -21,22 +21,20 @@
         android:paddingTop="3dp"
         android:paddingBottom="3dp">
 
-        <TextView
-            android:id="@+id/tvWifi"
+        <ImageView
+            android:id="@+id/ivWifi"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
-            android:textColor="@android:color/white"
-            android:textSize="11sp"
-            android:text="" />
+            android:layout_marginEnd="5dp"
+            android:visibility="gone"
+            android:contentDescription="@null" />
 
-        <TextView
-            android:id="@+id/tvSignal"
+        <ImageView
+            android:id="@+id/ivSignal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
-            android:textSize="11sp"
-            android:text="" />
+            android:visibility="gone"
+            android:contentDescription="@null" />
 
         <TextView
             android:id="@+id/tvCarrier"
