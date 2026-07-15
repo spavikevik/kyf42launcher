@@ -22,6 +22,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -32,13 +33,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-/** One launchable app. `t9` = space-joined per-word digit strings for keypad search. */
-data class AppInfo(
-    val label: String,
-    val packageName: String,
-    val icon: Drawable,
-    val t9: String = ""
-)
+/** One launchable app. */
+data class AppInfo(val label: String, val packageName: String, val icon: Drawable)
 
 /** Status-bar level icons (0..4), shared by home and lock screens. */
 internal val WIFI_ICONS = intArrayOf(
@@ -73,12 +69,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var widgets: HomeWidgets
 
     private lateinit var gridContainer: View
-    private lateinit var gridSearch: TextView
+    private lateinit var gridSearch: EditText
 
     private var screen = Screen.HOME
     private val apps = mutableListOf<AppInfo>()        // all launchable apps
-    private val gridApps = mutableListOf<AppInfo>()    // currently shown (T9-filtered)
-    private var t9query = ""
+    private val gridApps = mutableListOf<AppInfo>()    // currently shown (search-filtered)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +92,19 @@ class MainActivity : AppCompatActivity() {
 
         gridContainer = findViewById(R.id.gridContainer)
         gridSearch = findViewById(R.id.gridSearch)
+        gridSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                applySearch(s?.toString() ?: "")
+            }
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+        })
+        // Show the keypad IME only while the search field holds focus.
+        gridSearch.setOnFocusChangeListener { v, hasFocus -> showIme(v, hasFocus) }
+        // Down from the field jumps into the results.
+        gridSearch.setOnEditorActionListener { _, _, _ ->
+            appGrid.layoutManager?.findViewByPosition(0)?.requestFocus(); true
+        }
         appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns, roomy spacing
         appGrid.adapter = AppAdapter(gridApps) { app -> launchApp(app) }
 
@@ -299,13 +307,11 @@ class MainActivity : AppCompatActivity() {
         for (ri in resolved) {
             val pkg = ri.activityInfo.packageName
             if (pkg == packageName) continue          // hide ourselves
-            val label = ri.loadLabel(packageManager).toString()
             apps.add(
                 AppInfo(
-                    label = label,
+                    label = ri.loadLabel(packageManager).toString(),
                     packageName = pkg,
-                    icon = squircle(ri.loadIcon(packageManager)),
-                    t9 = t9of(label)
+                    icon = squircle(ri.loadIcon(packageManager))
                 )
             )
         }
@@ -315,35 +321,21 @@ class MainActivity : AppCompatActivity() {
         appGrid.adapter?.notifyDataSetChanged()
     }
 
-    // Map a label to space-joined per-word digit strings (a-c=2 … w-z=9; others dropped).
-    private fun t9of(label: String): String =
-        label.lowercase().split(Regex("\\s+")).joinToString(" ") { word ->
-            word.mapNotNull { t9digit(it) }.joinToString("")
-        }
-
-    private fun t9digit(c: Char): Char? = when (c) {
-        in 'a'..'c' -> '2'; in 'd'..'f' -> '3'; in 'g'..'i' -> '4'
-        in 'j'..'l' -> '5'; in 'm'..'o' -> '6'; in 'p'..'s' -> '7'
-        in 't'..'v' -> '8'; in 'w'..'z' -> '9'
-        else -> null
-    }
-
-    private fun applyT9() {
+    // Filter the grid by a substring of the app label (works for kana + latin).
+    private fun applySearch(query: String) {
         gridApps.clear()
-        if (t9query.isEmpty()) {
+        if (query.isBlank()) {
             gridApps.addAll(apps)
-            gridSearch.visibility = View.GONE
         } else {
-            gridApps.addAll(apps.filter { app ->
-                app.t9.split(' ').any { it.startsWith(t9query) }
-            })
-            gridSearch.text = "${t9query}  ·  ${gridApps.size}"
-            gridSearch.visibility = View.VISIBLE
+            gridApps.addAll(apps.filter { it.label.contains(query.trim(), ignoreCase = true) })
         }
         appGrid.adapter?.notifyDataSetChanged()
-        appGrid.post {
-            appGrid.layoutManager?.findViewByPosition(0)?.requestFocus()
-        }
+    }
+
+    private fun showIme(v: View, show: Boolean) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        if (show) imm?.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        else imm?.hideSoftInputFromWindow(v.windowToken, 0)
     }
 
     private fun launchApp(app: AppInfo) {
@@ -377,13 +369,12 @@ class MainActivity : AppCompatActivity() {
         homeView.visibility = View.GONE
         notifPanel.visibility = View.GONE
         gridContainer.visibility = View.VISIBLE
-        // Reset any prior T9 search.
-        t9query = ""
+        // Reset any prior search (without triggering the IME).
+        if (gridSearch.text.isNotEmpty()) gridSearch.setText("")
         gridApps.clear(); gridApps.addAll(apps)
-        gridSearch.visibility = View.GONE
         appGrid.adapter?.notifyDataSetChanged()
         appGrid.scheduleLayoutAnimation()   // replay the cascade on each open
-        lsk.text = ""
+        lsk.text = "Search"
         csk.text = "SELECT"
         rsk.text = "Options"
         appGrid.post {
@@ -447,15 +438,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             Screen.GRID -> when (keyCode) {
-                // Digit keys drive T9 search; # clears it.
-                in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                    t9query += ('0' + (keyCode - KeyEvent.KEYCODE_0))
-                    applyT9(); return true
-                }
-                KeyEvent.KEYCODE_POUND -> {
-                    if (t9query.isNotEmpty()) { t9query = ""; applyT9() }
-                    return true
-                }
+                // F1 = left soft key = focus the search field (brings up the IME).
+                KeyEvent.KEYCODE_F1 -> { gridSearch.requestFocus(); return true }
                 // F2 = right soft key = Options (TODO: app info / uninstall menu)
                 KeyEvent.KEYCODE_F2 -> return true
             }
@@ -475,10 +459,10 @@ class MainActivity : AppCompatActivity() {
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // In the grid, Back first deletes the last T9 digit; only exits when empty.
-        if (screen == Screen.GRID && t9query.isNotEmpty()) {
-            t9query = t9query.dropLast(1)
-            applyT9()
+        // In the grid: Back first clears an active search, then exits to home.
+        if (screen == Screen.GRID && gridSearch.text.isNotEmpty()) {
+            gridSearch.setText("")
+            appGrid.layoutManager?.findViewByPosition(0)?.requestFocus()
             return
         }
         if (screen == Screen.GRID || screen == Screen.NOTIF) showHome()

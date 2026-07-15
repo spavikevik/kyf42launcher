@@ -236,22 +236,24 @@
             android:background="@color/grid_scrim"
             android:visibility="gone">
 
-            <TextView
+            <EditText
                 android:id="@+id/gridSearch"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
+                android:layout_margin="8dp"
                 android:background="@drawable/infocard_bg"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:fontFamily="monospace"
-                android:letterSpacing="0.15"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:hint="Search apps"
+                android:textColorHint="@color/text_secondary"
                 android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:visibility="gone" />
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:inputType="text"
+                android:imeOptions="actionSearch|flagNoExtractUi" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/appGrid"
