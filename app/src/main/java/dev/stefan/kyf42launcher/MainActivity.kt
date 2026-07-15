@@ -24,6 +24,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
+import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -76,7 +78,7 @@ class MainActivity : AppCompatActivity() {
         tvCarrier = findViewById(R.id.tvCarrier)
         tvBattery = findViewById(R.id.tvBattery)
 
-        appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns on 3.4"
+        appGrid.layoutManager = GridLayoutManager(this, 4)   // iOS-style 4 columns
         appGrid.adapter = AppAdapter(apps) { app -> launchApp(app) }
 
         widgets = HomeWidgets(
@@ -153,7 +155,7 @@ class MainActivity : AppCompatActivity() {
             component = ComponentName(pkg, ai.name)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        addDockTile(ri.loadIcon(packageManager), ri.loadLabel(packageManager).toString()) {
+        addDockTile(squircle(ri.loadIcon(packageManager)), ri.loadLabel(packageManager).toString()) {
             try { startActivity(launch) } catch (_: Exception) {}
         }
     }
@@ -275,7 +277,7 @@ class MainActivity : AppCompatActivity() {
                 AppInfo(
                     label = ri.loadLabel(packageManager).toString(),
                     packageName = pkg,
-                    icon = ri.loadIcon(packageManager)
+                    icon = squircle(ri.loadIcon(packageManager))
                 )
             )
         }
@@ -285,6 +287,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun launchApp(app: AppInfo) {
         packageManager.getLaunchIntentForPackage(app.packageName)?.let { startActivity(it) }
+    }
+
+    // Mask an app icon into an iOS-style squircle (rounded square).
+    private fun squircle(d: android.graphics.drawable.Drawable): android.graphics.drawable.Drawable {
+        val px = (56 * resources.displayMetrics.density).toInt().coerceAtLeast(48)
+        val bmp = d.toBitmap(px, px)
+        return RoundedBitmapDrawableFactory.create(resources, bmp).apply {
+            cornerRadius = px * 0.225f
+        }
     }
 
     // --- Screen state (KaiOS: home clock  <->  app grid) ---
@@ -349,6 +360,12 @@ private class AppAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
+        // iOS-like: focused cell scales up and lifts above its neighbours.
+        v.setOnFocusChangeListener { view, hasFocus ->
+            val s = if (hasFocus) 1.12f else 1f
+            view.animate().scaleX(s).scaleY(s).setDuration(110).start()
+            view.z = if (hasFocus) 8f else 0f
+        }
         return VH(v)
     }
 
