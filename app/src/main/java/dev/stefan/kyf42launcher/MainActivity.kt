@@ -29,6 +29,16 @@ import androidx.recyclerview.widget.RecyclerView
 /** One launchable app. */
 data class AppInfo(val label: String, val packageName: String, val icon: Drawable)
 
+/** Status-bar level icons (0..4), shared by home and lock screens. */
+internal val WIFI_ICONS = intArrayOf(
+    R.drawable.ic_wifi_0, R.drawable.ic_wifi_1, R.drawable.ic_wifi_2,
+    R.drawable.ic_wifi_3, R.drawable.ic_wifi_4
+)
+internal val CELL_ICONS = intArrayOf(
+    R.drawable.ic_cell_0, R.drawable.ic_cell_1, R.drawable.ic_cell_2,
+    R.drawable.ic_cell_3, R.drawable.ic_cell_4
+)
+
 private enum class Screen { HOME, GRID }
 
 class MainActivity : AppCompatActivity() {
@@ -72,6 +82,21 @@ class MainActivity : AppCompatActivity() {
         showHome()
         setupStatusBar()
         hideSystemBars()
+
+        // Screen off -> pre-arm our lock screen so it's on top at wake.
+        // (As the foreground home app we're allowed to start it.)
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+    }
+
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            try {
+                startActivity(
+                    Intent(this@MainActivity, LockActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (_: Exception) { /* BAL denied: system keyguard handles it */ }
+        }
     }
 
     // --- Favorites dock: default apps + an "All apps" tile ---
@@ -152,16 +177,6 @@ class MainActivity : AppCompatActivity() {
         return WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
     }
 
-    companion object {
-        private val WIFI_ICONS = intArrayOf(
-            R.drawable.ic_wifi_0, R.drawable.ic_wifi_1, R.drawable.ic_wifi_2,
-            R.drawable.ic_wifi_3, R.drawable.ic_wifi_4
-        )
-        private val CELL_ICONS = intArrayOf(
-            R.drawable.ic_cell_0, R.drawable.ic_cell_1, R.drawable.ic_cell_2,
-            R.drawable.ic_cell_3, R.drawable.ic_cell_4
-        )
-    }
 
     private fun setupStatusBar() {
         // Sticky broadcast returns current battery immediately on register.
@@ -190,6 +205,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(screenOffReceiver) } catch (_: Exception) {}
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
         telephony?.listen(signalListener, PhoneStateListener.LISTEN_NONE)
     }

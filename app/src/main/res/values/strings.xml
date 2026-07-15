@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">KYF42 Launcher</string>
+    <string name="unlock_hint">Press OK to unlock</string>
 </resources>
