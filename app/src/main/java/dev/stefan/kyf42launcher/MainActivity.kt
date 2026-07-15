@@ -1,6 +1,7 @@
 package dev.stefan.kyf42launcher
 
 import android.app.KeyguardManager
+import android.app.Notification
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -13,6 +14,7 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Bundle
+import android.service.notification.StatusBarNotification
 import android.telephony.PhoneStateListener
 import android.telephony.SignalStrength
 import android.telephony.TelephonyManager
@@ -27,6 +29,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 /** One launchable app. */
@@ -42,13 +45,17 @@ internal val CELL_ICONS = intArrayOf(
     R.drawable.ic_cell_3, R.drawable.ic_cell_4
 )
 
-private enum class Screen { HOME, GRID }
+private enum class Screen { HOME, GRID, NOTIF }
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var homeView: View
     private lateinit var dock: LinearLayout
     private lateinit var appGrid: RecyclerView
+    private lateinit var notifPanel: View
+    private lateinit var notifList: RecyclerView
+    private lateinit var notifEmpty: View
+    private val notifData = mutableListOf<StatusBarNotification>()
     private lateinit var lsk: TextView
     private lateinit var csk: TextView
     private lateinit var rsk: TextView
@@ -80,6 +87,13 @@ class MainActivity : AppCompatActivity() {
 
         appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns, roomy spacing
         appGrid.adapter = AppAdapter(apps) { app -> launchApp(app) }
+
+        notifPanel = findViewById(R.id.notifPanel)
+        notifList = findViewById(R.id.notifList)
+        notifEmpty = findViewById(R.id.notifEmpty)
+        notifList.layoutManager = LinearLayoutManager(this)
+        notifList.adapter = NotifAdapter(this, notifData) { sbn -> openNotif(sbn) }
+        LockListenerService.onChange = { runOnUiThread { onNotifsChanged() } }
 
         widgets = HomeWidgets(
             this,
@@ -234,6 +248,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        LockListenerService.onChange = null
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(screenOffReceiver) } catch (_: Exception) {}
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
@@ -302,7 +317,9 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.HOME
         homeView.visibility = View.VISIBLE
         appGrid.visibility = View.GONE
-        lsk.text = ""
+        notifPanel.visibility = View.GONE
+        val n = LockListenerService.instance?.current()?.size ?: 0
+        lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
         csk.text = ""
         rsk.text = ""
         dock.post { dock.getChildAt(0)?.requestFocus() }
@@ -311,6 +328,7 @@ class MainActivity : AppCompatActivity() {
     private fun showGrid() {
         screen = Screen.GRID
         homeView.visibility = View.GONE
+        notifPanel.visibility = View.GONE
         appGrid.visibility = View.VISIBLE
         appGrid.scheduleLayoutAnimation()   // replay the cascade on each open
         lsk.text = ""
@@ -322,18 +340,69 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // --- Notifications center ---
+    private fun showNotifications() {
+        screen = Screen.NOTIF
+        homeView.visibility = View.GONE
+        appGrid.visibility = View.GONE
+        notifPanel.visibility = View.VISIBLE
+        lsk.text = "Clear all"
+        csk.text = "OPEN"
+        rsk.text = ""
+        refreshNotifs()
+        notifList.post {
+            notifList.layoutManager?.findViewByPosition(0)?.requestFocus()
+                ?: notifPanel.requestFocus()
+        }
+    }
+
+    private fun refreshNotifs() {
+        notifData.clear()
+        notifData.addAll(LockListenerService.instance?.current() ?: emptyList())
+        notifList.adapter?.notifyDataSetChanged()
+        val empty = notifData.isEmpty()
+        notifEmpty.visibility = if (empty) View.VISIBLE else View.GONE
+        notifList.visibility = if (empty) View.GONE else View.VISIBLE
+    }
+
+    private fun onNotifsChanged() {
+        if (screen == Screen.NOTIF) refreshNotifs()
+        if (screen == Screen.HOME) {
+            val n = LockListenerService.instance?.current()?.size ?: 0
+            lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
+        }
+    }
+
+    private fun openNotif(sbn: StatusBarNotification) {
+        try { sbn.notification.contentIntent?.send() } catch (_: Exception) {}
+        try { LockListenerService.instance?.cancelNotification(sbn.key) } catch (_: Exception) {}
+        showHome()
+    }
+
     // --- KYF42 physical keys (see matrix_keypad.kl) ---
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (screen) {
             Screen.HOME -> when (keyCode) {
-                // Up from the dock opens the full app grid, KaiOS-style.
-                // Everything else (left/right/center) falls through to the focus
-                // system so the D-pad can traverse the dock and center-click a tile.
+                // Up from the dock opens the app grid; Down opens notifications
+                // (F1/left soft key also opens notifications). Left/right/center
+                // fall through to the focus system for dock traversal + launch.
                 KeyEvent.KEYCODE_DPAD_UP -> { showGrid(); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_F1 -> {
+                    showNotifications(); return true
+                }
             }
             Screen.GRID -> when (keyCode) {
                 // F2 = right soft key = Options (TODO: app info / uninstall menu)
                 KeyEvent.KEYCODE_F2 -> return true
+            }
+            Screen.NOTIF -> when (keyCode) {
+                KeyEvent.KEYCODE_F1 -> {   // left soft key = Clear all
+                    try { LockListenerService.instance?.cancelAllNotifications() } catch (_: Exception) {}
+                    // cancelAll is async; onChange refreshes as removals land, plus
+                    // a delayed sweep in case the last callback is missed.
+                    notifList.postDelayed({ if (screen == Screen.NOTIF) refreshNotifs() }, 250)
+                    return true
+                }
             }
         }
         return super.onKeyDown(keyCode, event)
@@ -342,7 +411,7 @@ class MainActivity : AppCompatActivity() {
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (screen == Screen.GRID) showHome()
+        if (screen == Screen.GRID || screen == Screen.NOTIF) showHome()
         // else: stay on home (do nothing)
     }
 }
@@ -380,5 +449,46 @@ private class AppAdapter(
 
     companion object {
         private const val DIM = 0.5f
+    }
+}
+
+/** Notifications-center rows. */
+private class NotifAdapter(
+    private val ctx: android.content.Context,
+    private val items: List<StatusBarNotification>,
+    private val onOpen: (StatusBarNotification) -> Unit
+) : RecyclerView.Adapter<NotifAdapter.VH>() {
+
+    class VH(view: View) : RecyclerView.ViewHolder(view) {
+        val icon: ImageView = view.findViewById(R.id.notifIcon)
+        val title: TextView = view.findViewById(R.id.notifTitle)
+        val text: TextView = view.findViewById(R.id.notifText)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_notif, parent, false)
+        return VH(v)
+    }
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val sbn = items[position]
+        val extras = sbn.notification.extras
+        holder.title.text = extras.getCharSequence(Notification.EXTRA_TITLE)
+            ?: appLabel(sbn.packageName)
+        holder.text.text = extras.getCharSequence(Notification.EXTRA_TEXT) ?: ""
+        holder.icon.setImageDrawable(iconFor(sbn))
+        holder.itemView.setOnClickListener { onOpen(sbn) }
+    }
+
+    override fun getItemCount() = items.size
+
+    private fun appLabel(pkg: String): CharSequence = try {
+        ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0))
+    } catch (_: Exception) { pkg }
+
+    private fun iconFor(sbn: StatusBarNotification): android.graphics.drawable.Drawable? = try {
+        ctx.packageManager.getApplicationIcon(sbn.packageName)
+    } catch (_: Exception) {
+        try { sbn.notification.smallIcon?.loadDrawable(ctx) } catch (_: Exception) { null }
     }
 }
