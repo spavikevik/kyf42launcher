@@ -173,6 +173,7 @@ class MainActivity : AppCompatActivity() {
     // --- Favorites dock: default apps + an "All apps" tile ---
     private val dockPkgs = mutableSetOf<String>()
     private val DOCK_MAX = 5
+    private val REQ_PICK_CONTACT = 42
 
     private fun buildDock() {
         dock.removeAllViews()
@@ -593,6 +594,10 @@ class MainActivity : AppCompatActivity() {
                     showNotifications(); return true
                 }
                 KeyEvent.KEYCODE_F2 -> { showControl(); return true }
+                // Number keys 2-9 = speed dial. Track for long-press (assign).
+                in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 -> {
+                    event.startTracking(); return true
+                }
             }
             Screen.GRID -> when (keyCode) {
                 // F1 = left soft key = focus the search field (brings up the IME).
@@ -618,6 +623,74 @@ class MainActivity : AppCompatActivity() {
     }
 
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
+    // --- Speed dial (home number keys 2-9): short = call, long = (re)assign ---
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
+        if (screen == Screen.HOME && keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9) {
+            assignSpeedDial(keyCode - KeyEvent.KEYCODE_0)
+            return true
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (screen == Screen.HOME && keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 && !event.isCanceled) {
+            speedDialShort(keyCode - KeyEvent.KEYCODE_0)
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun speedDialShort(digit: Int) {
+        val entry = prefs.getString("sd_$digit", null)
+        if (entry == null) assignSpeedDial(digit)
+        else callNumber(entry.substringBefore("|"))
+    }
+
+    private var pendingSpeedDial = 0
+    private fun assignSpeedDial(digit: Int) {
+        pendingSpeedDial = digit
+        try {
+            startActivityForResult(
+                Intent(Intent.ACTION_PICK, android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI),
+                REQ_PICK_CONTACT
+            )
+        } catch (_: Exception) {}
+    }
+
+    private fun callNumber(number: String) {
+        val hasCall = checkSelfPermission(android.Manifest.permission.CALL_PHONE) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        val action = if (hasCall) Intent.ACTION_CALL else Intent.ACTION_DIAL
+        try {
+            startActivity(Intent(action, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) {}
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_PICK_CONTACT || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        try {
+            contentResolver.query(
+                uri,
+                arrayOf(
+                    android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER,
+                    android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                ),
+                null, null, null
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    val number = c.getString(0) ?: return
+                    val name = c.getString(1) ?: number
+                    prefs.edit().putString("sd_$pendingSpeedDial", "$number|$name").apply()
+                    android.widget.Toast.makeText(
+                        this, "Speed dial $pendingSpeedDial → $name", android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // In the grid: Back first clears an active search, then exits to home.
