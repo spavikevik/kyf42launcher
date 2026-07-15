@@ -9,12 +9,14 @@
 
     <!-- top fade for status legibility -->
     <View
+        android:id="@+id/lockTopFade"
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_gravity="top"
         android:background="@drawable/topbar_fade" />
 
     <LinearLayout
+        android:id="@+id/lockStatusRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -50,6 +52,7 @@
 
     <!-- clock block, upper third like iOS -->
     <LinearLayout
+        android:id="@+id/lockClockBlock"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"

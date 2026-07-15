@@ -129,13 +129,23 @@ class LockActivity : AppCompatActivity() {
         // If a secure system lock is set, hand off to the REAL keyguard prompt
         // (system PIN). Security stays in the OS; our screen is just the entry.
         if (Build.VERSION.SDK_INT >= 26 && km?.isKeyguardLocked == true && km.isDeviceSecure) {
+            setChrome(View.INVISIBLE)   // hide our clock/status so the PIN screen isn't doubled
             km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
                 override fun onDismissSucceeded() = dismissToHome()
-                // onDismissCancelled / onDismissError: stay locked.
+                override fun onDismissCancelled() { setChrome(View.VISIBLE) }
+                override fun onDismissError() { setChrome(View.VISIBLE) }
             })
         } else {
             dismissToHome()   // no secure lock -> cosmetic dismiss
         }
+    }
+
+    // Toggle our own clock/status/hint so they don't stack under the system bouncer.
+    private fun setChrome(vis: Int) {
+        findViewById<View>(R.id.lockTopFade).visibility = vis
+        findViewById<View>(R.id.lockStatusRow).visibility = vis
+        findViewById<View>(R.id.lockClockBlock).visibility = vis
+        findViewById<View>(R.id.unlockHint).visibility = vis
     }
 
     private fun dismissToHome() {
