@@ -107,7 +107,13 @@ class LockActivity : AppCompatActivity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> finish()
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                finish()
+                // No window animation: shrinks the gap where the system
+                // nav bar can flash between lock and home.
+                @Suppress("DEPRECATION")
+                overridePendingTransition(0, 0)
+            }
         }
         return true
     }

@@ -228,6 +228,11 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) hideSystemBars()
     }
 
+    override fun onResume() {
+        super.onResume()
+        hideSystemBars()   // re-assert before the window is shown (lock dismissal)
+    }
+
     // --- CORE (yours to tune): enumerate launchable apps ---
     private fun loadApps() {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
