@@ -166,17 +166,55 @@ class MainActivity : AppCompatActivity() {
 
     // --- Favorites dock: default apps + an "All apps" tile ---
     private val dockPkgs = mutableSetOf<String>()
+    private val DOCK_MAX = 5
 
     private fun buildDock() {
         dock.removeAllViews()
         dockPkgs.clear()
-        addFavIfResolved(Intent(Intent.ACTION_DIAL))
-        addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING))
-        addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CONTACTS))
-        addFavIfResolved(Intent("android.media.action.STILL_IMAGE_CAMERA"))
-        addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER))
+        val pinned = loadDockPkgs()
+        if (pinned.isEmpty()) {
+            // Defaults, resolved from system: dialer / messaging / contacts / camera / browser.
+            addFavIfResolved(Intent(Intent.ACTION_DIAL))
+            addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING))
+            addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CONTACTS))
+            addFavIfResolved(Intent("android.media.action.STILL_IMAGE_CAMERA"))
+            addFavIfResolved(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER))
+        } else {
+            pinned.forEach { addPinnedApp(it) }
+        }
         // Always present: open the full app grid.
         addDockTile(getDrawable(R.drawable.ic_apps), "Apps") { showGrid() }
+    }
+
+    private fun addPinnedApp(pkg: String) {
+        val launch = packageManager.getLaunchIntentForPackage(pkg) ?: return
+        if (!dockPkgs.add(pkg)) return
+        val icon = try { squircle(packageManager.getApplicationIcon(pkg)) } catch (_: Exception) { null }
+        val label = try {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+        } catch (_: Exception) { pkg }
+        addDockTile(icon, label) { try { startActivity(launch) } catch (_: Exception) {} }
+    }
+
+    private val prefs get() = getSharedPreferences("kyf42", Context.MODE_PRIVATE)
+    private fun loadDockPkgs(): List<String> =
+        prefs.getString("dock_pkgs", "")!!.split("\n").filter { it.isNotBlank() }
+    private fun saveDockPkgs(list: List<String>) =
+        prefs.edit().putString("dock_pkgs", list.joinToString("\n")).apply()
+
+    // Pin/unpin an app; seeds from the current (default) dock on first change.
+    private fun toggleDock(pkg: String) {
+        val base = loadDockPkgs().ifEmpty { dockPkgs.toList() }.toMutableList()
+        when {
+            base.contains(pkg) -> base.remove(pkg)
+            base.size >= DOCK_MAX -> {
+                android.widget.Toast.makeText(this, "Dock full", android.widget.Toast.LENGTH_SHORT).show()
+                return
+            }
+            else -> base.add(pkg)
+        }
+        saveDockPkgs(base)
+        buildDock()
     }
 
     private fun addFavIfResolved(intent: Intent) {
@@ -353,6 +391,9 @@ class MainActivity : AppCompatActivity() {
     private fun showOptions(app: AppInfo) {
         val view = layoutInflater.inflate(R.layout.dialog_options, null)
         view.findViewById<TextView>(R.id.optTitle).text = app.label
+        val pinRow = view.findViewById<TextView>(R.id.optPin)
+        val pinned = dockPkgs.contains(app.packageName)   // what's currently in the dock
+        pinRow.text = if (pinned) "Remove from dock" else "Pin to dock"
         val dialog = android.app.Dialog(this).apply {
             requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
             setContentView(view)
@@ -381,9 +422,10 @@ class MainActivity : AppCompatActivity() {
             )
             dialog.dismiss()
         }
+        pinRow.setOnClickListener { toggleDock(app.packageName); dialog.dismiss() }
         view.findViewById<View>(R.id.optCancel).setOnClickListener { dialog.dismiss() }
         dialog.show()
-        view.findViewById<View>(R.id.optInfo).requestFocus()
+        pinRow.requestFocus()
     }
 
     // Mask an app icon into an iOS-style squircle (rounded square).
