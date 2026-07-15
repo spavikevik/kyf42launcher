@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/options_card_bg"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/optTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/optInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="14dp"
+        android:focusable="true"
+        android:background="@drawable/opt_row_bg"
+        android:text="App info"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/optUninstall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="14dp"
+        android:focusable="true"
+        android:background="@drawable/opt_row_bg"
+        android:text="Uninstall"
+        android:textColor="#FF6B6B"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/optCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="14dp"
+        android:focusable="true"
+        android:background="@drawable/opt_row_bg"
+        android:text="Cancel"
+        android:textColor="@color/text_secondary"
+        android:textSize="15sp" />
+</LinearLayout>

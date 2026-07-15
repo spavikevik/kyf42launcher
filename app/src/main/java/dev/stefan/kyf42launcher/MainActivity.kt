@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
@@ -342,6 +343,49 @@ class MainActivity : AppCompatActivity() {
         packageManager.getLaunchIntentForPackage(app.packageName)?.let { startActivity(it) }
     }
 
+    // The grid app currently holding D-pad focus.
+    private fun focusedApp(): AppInfo? {
+        val fv = appGrid.findFocus() ?: return null
+        val pos = appGrid.getChildAdapterPosition(fv)
+        return gridApps.getOrNull(pos)
+    }
+
+    private fun showOptions(app: AppInfo) {
+        val view = layoutInflater.inflate(R.layout.dialog_options, null)
+        view.findViewById<TextView>(R.id.optTitle).text = app.label
+        val dialog = android.app.Dialog(this).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            setContentView(view)
+            window?.apply {
+                setBackgroundDrawableResource(android.R.color.transparent)
+                setGravity(android.view.Gravity.BOTTOM)
+                setLayout(
+                    android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT
+                )
+                decorView.setPadding(18, 0, 18, 18)
+            }
+        }
+        view.findViewById<View>(R.id.optInfo).setOnClickListener {
+            startActivity(
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.parse("package:${app.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            dialog.dismiss()
+        }
+        view.findViewById<View>(R.id.optUninstall).setOnClickListener {
+            startActivity(
+                Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            dialog.dismiss()
+        }
+        view.findViewById<View>(R.id.optCancel).setOnClickListener { dialog.dismiss() }
+        dialog.show()
+        view.findViewById<View>(R.id.optInfo).requestFocus()
+    }
+
     // Mask an app icon into an iOS-style squircle (rounded square).
     private fun squircle(d: android.graphics.drawable.Drawable): android.graphics.drawable.Drawable {
         val px = (56 * resources.displayMetrics.density).toInt().coerceAtLeast(48)
@@ -440,8 +484,11 @@ class MainActivity : AppCompatActivity() {
             Screen.GRID -> when (keyCode) {
                 // F1 = left soft key = focus the search field (brings up the IME).
                 KeyEvent.KEYCODE_F1 -> { gridSearch.requestFocus(); return true }
-                // F2 = right soft key = Options (TODO: app info / uninstall menu)
-                KeyEvent.KEYCODE_F2 -> return true
+                // F2 = right soft key = Options for the focused app.
+                KeyEvent.KEYCODE_F2 -> {
+                    focusedApp()?.let { showOptions(it) }
+                    return true
+                }
             }
             Screen.NOTIF -> when (keyCode) {
                 KeyEvent.KEYCODE_F1 -> {   // left soft key = Clear all
