@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity() {
         tvCarrier = findViewById(R.id.tvCarrier)
         tvBattery = findViewById(R.id.tvBattery)
 
-        appGrid.layoutManager = GridLayoutManager(this, 4)   // iOS-style 4 columns
+        appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns, roomy spacing
         appGrid.adapter = AppAdapter(apps) { app -> launchApp(app) }
 
         widgets = HomeWidgets(
