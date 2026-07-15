@@ -81,8 +81,8 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="54dp"
                 android:orientation="vertical"
                 android:gravity="center">
 
@@ -112,6 +112,103 @@
                     android:textAllCaps="true"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Glanceable info card: weather / next event / next alarm -->
+            <LinearLayout
+                android:id="@+id/infoCard"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/infocard_bg"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="11dp"
+                android:paddingBottom="11dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/rowWeather"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+                    <ImageView
+                        android:id="@+id/wxIcon"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@null" />
+                    <TextView
+                        android:id="@+id/wxTemp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="21sp" />
+                    <TextView
+                        android:id="@+id/wxCond"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/rowEvent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+                    <ImageView
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
+                        android:src="@drawable/ic_event"
+                        android:contentDescription="@null" />
+                    <TextView
+                        android:id="@+id/evText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:maxWidth="220dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/rowAlarm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+                    <ImageView
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
+                        android:src="@drawable/ic_alarm"
+                        android:contentDescription="@null" />
+                    <TextView
+                        android:id="@+id/alText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Favorites dock: floating translucent island (iOS-style) -->

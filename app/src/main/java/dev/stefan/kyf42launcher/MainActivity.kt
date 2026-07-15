@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvBattery: TextView
     private var telephony: TelephonyManager? = null
     private var connectivity: ConnectivityManager? = null
+    private lateinit var widgets: HomeWidgets
 
     private var screen = Screen.HOME
     private val apps = mutableListOf<AppInfo>()
@@ -78,10 +79,20 @@ class MainActivity : AppCompatActivity() {
         appGrid.layoutManager = GridLayoutManager(this, 3)   // 3 columns on 3.4"
         appGrid.adapter = AppAdapter(apps) { app -> launchApp(app) }
 
+        widgets = HomeWidgets(
+            this,
+            findViewById(R.id.infoCard),
+            findViewById(R.id.rowWeather), findViewById(R.id.wxIcon),
+            findViewById(R.id.wxTemp), findViewById(R.id.wxCond),
+            findViewById(R.id.rowEvent), findViewById(R.id.evText),
+            findViewById(R.id.rowAlarm), findViewById(R.id.alText),
+        )
+
         loadApps()
         buildDock()
         showHome()
         setupStatusBar()
+        widgets.refresh()
         hideSystemBars()
 
         // Screen off -> pre-arm our (cosmetic) lock screen for non-secure devices.
@@ -249,6 +260,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         hideSystemBars()   // re-assert before the window is shown (lock dismissal)
+        if (::widgets.isInitialized) widgets.refresh()
     }
 
     // --- CORE (yours to tune): enumerate launchable apps ---
