@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Stagger each item's entrance for a cascade on grid open. -->
 <layoutAnimation xmlns:android="http://schemas.android.com/apk/res/android"
-    android:delay="7%"
+    android:delay="12%"
     android:animationOrder="normal"
     android:animation="@anim/grid_item" />

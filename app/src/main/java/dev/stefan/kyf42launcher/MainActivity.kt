@@ -361,15 +361,25 @@ private class AppAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
-        return VH(v)   // selection = soft highlight only (no scale)
+        // Selection: soft highlight + the focused icon at full brightness,
+        // the rest dimmed.
+        v.setOnFocusChangeListener { view, hasFocus ->
+            view.animate().alpha(if (hasFocus) 1f else DIM).setDuration(150).start()
+        }
+        return VH(v)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val app = apps[position]
         holder.icon.setImageDrawable(app.icon)
         holder.label.text = app.label
+        holder.itemView.alpha = if (holder.itemView.hasFocus()) 1f else DIM
         holder.itemView.setOnClickListener { onLaunch(app) }
     }
 
     override fun getItemCount() = apps.size
+
+    companion object {
+        private const val DIM = 0.5f
+    }
 }
