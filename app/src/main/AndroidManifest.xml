@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <!-- Custom lock screen over the keyguard -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Control center: brightness + ringer/DND + bluetooth state -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
 
     <application
         android:allowBackup="true"

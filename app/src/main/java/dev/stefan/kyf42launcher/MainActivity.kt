@@ -47,7 +47,7 @@ internal val CELL_ICONS = intArrayOf(
     R.drawable.ic_cell_3, R.drawable.ic_cell_4
 )
 
-private enum class Screen { HOME, GRID, NOTIF }
+private enum class Screen { HOME, GRID, NOTIF, CONTROL }
 
 class MainActivity : AppCompatActivity() {
 
@@ -57,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifPanel: View
     private lateinit var notifList: RecyclerView
     private lateinit var notifEmpty: View
+    private lateinit var controlPanel: View
+    private lateinit var control: ControlCenter
     private val notifData = mutableListOf<StatusBarNotification>()
     private lateinit var lsk: TextView
     private lateinit var csk: TextView
@@ -115,6 +117,10 @@ class MainActivity : AppCompatActivity() {
         notifList.layoutManager = LinearLayoutManager(this)
         notifList.adapter = NotifAdapter(this, notifData) { sbn -> openNotif(sbn) }
         LockListenerService.onChange = { runOnUiThread { onNotifsChanged() } }
+
+        controlPanel = findViewById(R.id.controlPanel)
+        control = ControlCenter(this, findViewById(R.id.ctrlGrid))
+        control.build()
 
         widgets = HomeWidgets(
             this,
@@ -492,10 +498,11 @@ class MainActivity : AppCompatActivity() {
         homeView.visibility = View.VISIBLE
         gridContainer.visibility = View.GONE
         notifPanel.visibility = View.GONE
+        controlPanel.visibility = View.GONE
         val n = LockListenerService.instance?.current()?.size ?: 0
         lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
         csk.text = ""
-        rsk.text = ""
+        rsk.text = "Controls"
         dock.post { dock.getChildAt(0)?.requestFocus() }
     }
 
@@ -503,6 +510,7 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.GRID
         homeView.visibility = View.GONE
         notifPanel.visibility = View.GONE
+        controlPanel.visibility = View.GONE
         gridContainer.visibility = View.VISIBLE
         // Reset any prior search (without triggering the IME).
         if (gridSearch.text.isNotEmpty()) gridSearch.setText("")
@@ -523,6 +531,7 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.NOTIF
         homeView.visibility = View.GONE
         gridContainer.visibility = View.GONE
+        controlPanel.visibility = View.GONE
         notifPanel.visibility = View.VISIBLE
         lsk.text = "Clear all"
         csk.text = "OPEN"
@@ -560,6 +569,18 @@ class MainActivity : AppCompatActivity() {
         showHome()
     }
 
+    // --- Control center ---
+    private fun showControl() {
+        screen = Screen.CONTROL
+        homeView.visibility = View.GONE
+        gridContainer.visibility = View.GONE
+        notifPanel.visibility = View.GONE
+        controlPanel.visibility = View.VISIBLE
+        lsk.text = ""; csk.text = ""; rsk.text = ""
+        control.refresh()
+        controlPanel.post { control.firstView()?.requestFocus() }
+    }
+
     // --- KYF42 physical keys (see matrix_keypad.kl) ---
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (screen) {
@@ -571,6 +592,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_F1 -> {
                     showNotifications(); return true
                 }
+                KeyEvent.KEYCODE_F2 -> { showControl(); return true }
             }
             Screen.GRID -> when (keyCode) {
                 // F1 = left soft key = focus the search field (brings up the IME).
@@ -581,6 +603,7 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
+            Screen.CONTROL -> {}   // tiles handle focus/center; Back exits (onBackPressed)
             Screen.NOTIF -> when (keyCode) {
                 KeyEvent.KEYCODE_F1 -> {   // left soft key = Clear all
                     try { LockListenerService.instance?.cancelAllNotifications() } catch (_: Exception) {}
@@ -603,7 +626,7 @@ class MainActivity : AppCompatActivity() {
             appGrid.layoutManager?.findViewByPosition(0)?.requestFocus()
             return
         }
-        if (screen == Screen.GRID || screen == Screen.NOTIF) showHome()
+        if (screen == Screen.GRID || screen == Screen.NOTIF || screen == Screen.CONTROL) showHome()
         // else: stay on home (do nothing)
     }
 }

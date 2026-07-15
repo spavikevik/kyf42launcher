@@ -313,6 +313,34 @@
                 android:focusable="true"
                 android:descendantFocusability="afterDescendants" />
         </LinearLayout>
+
+        <!-- CONTROL CENTER: quick toggles -->
+        <LinearLayout
+            android:id="@+id/controlPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/grid_scrim"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="10dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                android:text="Controls"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp" />
+
+            <GridLayout
+                android:id="@+id/ctrlGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="3" />
+        </LinearLayout>
     </FrameLayout>
 
     <!-- SOFT-KEY BAR: LSK (F1) | SELECT (center) | RSK (F2) -->
