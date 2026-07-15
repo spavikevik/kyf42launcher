@@ -360,13 +360,7 @@ private class AppAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
-        // iOS-like: focused cell scales up and lifts above its neighbours.
-        v.setOnFocusChangeListener { view, hasFocus ->
-            val s = if (hasFocus) 1.12f else 1f
-            view.animate().scaleX(s).scaleY(s).setDuration(110).start()
-            view.z = if (hasFocus) 8f else 0f
-        }
-        return VH(v)
+        return VH(v)   // selection = soft highlight only (no scale)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
