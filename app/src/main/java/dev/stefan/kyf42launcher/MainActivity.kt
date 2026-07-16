@@ -671,9 +671,9 @@ class MainActivity : AppCompatActivity() {
         if (prefs.getBoolean("debug", false)) buildDebugSection()
     }
 
-    // --- Kai carousel: recently used apps in a row above the dock ---
+    // --- Kai carousel: recent apps in a vertical rail above the dock ---
     private fun buildCarousel() {
-        val recents = recentApps(5, exclude = dockPkgs)
+        val recents = recentApps(4, exclude = dockPkgs)
         carousel.removeAllViews()
         carousel.visibility = if (recents.isEmpty()) View.GONE else View.VISIBLE
         recents.forEach { app ->
@@ -894,22 +894,31 @@ class MainActivity : AppCompatActivity() {
         if (keyCode == KeyEvent.KEYCODE_APP_SWITCH) { showRecents(); return true }
         when (screen) {
             Screen.HOME -> when (keyCode) {
-                // Up from the dock steps into the carousel (if present), then the
-                // grid; Down from the carousel returns to the dock, from the dock
-                // opens notifications. Left/right/center fall through to the
-                // focus system for tile traversal + launch.
+                // Up from the dock steps into the carousel rail (bottom item);
+                // inside the rail Up/Down move between items (framework focus
+                // traversal), Up past the top opens the grid, Down past the
+                // bottom returns to the dock. Without the rail, Up = grid and
+                // Down = notifications. Left/right/center fall through to the
+                // focus system for dock traversal + launch.
                 KeyEvent.KEYCODE_DPAD_UP -> {
-                    val inCarousel = currentFocus?.parent === carousel
-                    if (!inCarousel && carousel.visibility == View.VISIBLE && carousel.childCount > 0) {
-                        carousel.getChildAt(0).requestFocus()
-                    } else showGrid()
-                    return true
+                    val f = currentFocus
+                    if (f?.parent === carousel) {
+                        if (carousel.indexOfChild(f) == 0) { showGrid(); return true }
+                        // inner item: let focus traversal move up the rail
+                    } else if (carousel.visibility == View.VISIBLE && carousel.childCount > 0) {
+                        carousel.getChildAt(carousel.childCount - 1).requestFocus()
+                        return true
+                    } else { showGrid(); return true }
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_F1 -> {
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentFocus?.parent === carousel) {
-                        dock.getChildAt(0)?.requestFocus()
-                    } else showNotifications()
-                    return true
+                    val f = currentFocus
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && f?.parent === carousel) {
+                        if (carousel.indexOfChild(f) == carousel.childCount - 1) {
+                            dock.getChildAt(0)?.requestFocus()
+                            return true
+                        }
+                        // inner item: let focus traversal move down the rail
+                    } else { showNotifications(); return true }
                 }
                 KeyEvent.KEYCODE_F2 -> { showControl(); return true }
                 // Number keys 2-9 = speed dial. Track for long-press (assign).

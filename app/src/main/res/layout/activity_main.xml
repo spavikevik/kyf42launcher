@@ -73,9 +73,15 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- HOME screen: clock up top, favorites dock at the bottom (KaiOS-like) -->
-        <LinearLayout
+        <!-- HOME screen: clock up top, favorites dock at the bottom (KaiOS-like).
+             FrameLayout so the carousel rail can overlay the right edge without
+             consuming column height. -->
+        <FrameLayout
             android:id="@+id/homeView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
@@ -212,17 +218,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Kai carousel: recently used apps, one UP from the dock -->
-            <LinearLayout
-                android:id="@+id/carousel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="6dp"
-                android:visibility="gone" />
-
             <!-- Favorites dock: floating translucent island (iOS-style) -->
             <LinearLayout
                 android:id="@+id/dock"
@@ -238,6 +233,20 @@
                 android:paddingTop="7dp"
                 android:paddingBottom="7dp" />
         </LinearLayout>
+
+        <!-- Kai carousel: recent apps in a vertical rail beside the info card,
+             one UP from the dock. Overlay so it never displaces the column. -->
+        <LinearLayout
+            android:id="@+id/carousel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="78dp"
+            android:visibility="gone" />
+        </FrameLayout>
 
         <!-- APP GRID (+ T9 search bar): hidden until opened from home -->
         <LinearLayout
