@@ -713,12 +713,33 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<TextView>(R.id.listTitle).text = "Recent apps"
         val rows = view.findViewById<LinearLayout>(R.id.listRows)
         val dialog = makeSheet(view)
-        val iconPx = (30 * resources.displayMetrics.density).toInt()
+        val d = resources.displayMetrics.density
+        val iconPx = (30 * d).toInt()
+        val pad = (12 * d).toInt()
         recents.forEach { app ->
-            val row = sheetRow(app.label)
-            app.icon.setBounds(0, 0, iconPx, iconPx)
-            row.setCompoundDrawables(app.icon, null, null, null)
-            row.compoundDrawablePadding = (12 * resources.displayMetrics.density).toInt()
+            // Use an ImageView (fit-center) rather than a compound drawable: the
+            // latter needs setBounds() on app.icon, which is shared with the
+            // carousel/grid/dock and would shrink them until they re-layout.
+            val row = LinearLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding((14 * d).toInt(), (14 * d).toInt(), (14 * d).toInt(), (14 * d).toInt())
+                isFocusable = true
+                setBackgroundResource(R.drawable.opt_row_bg)
+            }
+            val iv = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(iconPx, iconPx).apply { marginEnd = pad }
+                setImageDrawable(app.icon)
+            }
+            val label = TextView(this).apply {
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                textSize = 15f
+                text = app.label
+            }
+            row.addView(iv); row.addView(label)
             row.setOnClickListener { launchApp(app); dialog.dismiss() }
             rows.addView(row)
         }
