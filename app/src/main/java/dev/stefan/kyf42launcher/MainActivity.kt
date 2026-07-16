@@ -652,33 +652,59 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    // --- F3/F4 app shortcuts ---
+    // --- F3/F4 shortcuts (target = a package name or an "action:" token) ---
     private fun shortcutKey(keyCode: Int) = if (keyCode == KeyEvent.KEYCODE_F3) "sc_f3" else "sc_f4"
 
+    // Built-in launcher actions selectable as a shortcut target.
+    private val shortcutActions = listOf(
+        "action:grid" to "App grid",
+        "action:notif" to "Notifications",
+        "action:control" to "Control center"
+    )
+
     private fun shortcutShort(keyCode: Int) {
-        val pkg = prefs.getString(shortcutKey(keyCode), null)
-        if (pkg == null) assignShortcut(keyCode)
-        else packageManager.getLaunchIntentForPackage(pkg)?.let {
-            try { startActivity(it) } catch (_: Exception) {}
-        } ?: assignShortcut(keyCode)
+        // F4 defaults to the app grid; F3 defaults to unassigned.
+        val default = if (keyCode == KeyEvent.KEYCODE_F4) "action:grid" else null
+        val target = prefs.getString(shortcutKey(keyCode), default)
+        if (target == null) { assignShortcut(keyCode); return }
+        runShortcut(target) { assignShortcut(keyCode) }
+    }
+
+    private fun runShortcut(target: String, onMissing: () -> Unit) {
+        when (target) {
+            "action:grid" -> showGrid()
+            "action:notif" -> showNotifications()
+            "action:control" -> showControl()
+            else -> packageManager.getLaunchIntentForPackage(target)?.let {
+                try { startActivity(it) } catch (_: Exception) {}
+            } ?: onMissing()
+        }
     }
 
     private fun assignShortcut(keyCode: Int) {
         val name = if (keyCode == KeyEvent.KEYCODE_F3) "F3" else "F4"
-        showAppPicker("Assign $name to:") { app ->
-            prefs.edit().putString(shortcutKey(keyCode), app.packageName).apply()
-            android.widget.Toast.makeText(this, "$name → ${app.label}", android.widget.Toast.LENGTH_SHORT).show()
+        showShortcutPicker("Assign $name to:") { token, label ->
+            prefs.edit().putString(shortcutKey(keyCode), token).apply()
+            android.widget.Toast.makeText(this, "$name → $label", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun showAppPicker(title: String, onPick: (AppInfo) -> Unit) {
+    private fun showShortcutPicker(title: String, onPick: (String, String) -> Unit) {
         val view = layoutInflater.inflate(R.layout.dialog_picker, null)
         view.findViewById<TextView>(R.id.pickTitle).text = title
         val rows = view.findViewById<LinearLayout>(R.id.pickRows)
         val dialog = makeSheet(view)
+        // Built-in actions first (cyan accent), then apps.
+        shortcutActions.forEach { (token, label) ->
+            val row = sheetRow(label).apply {
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.kai_blue))
+            }
+            row.setOnClickListener { onPick(token, label); dialog.dismiss() }
+            rows.addView(row)
+        }
         apps.forEach { app ->
             val row = sheetRow(app.label)
-            row.setOnClickListener { onPick(app); dialog.dismiss() }
+            row.setOnClickListener { onPick(app.packageName, app.label); dialog.dismiss() }
             rows.addView(row)
         }
         dialog.show()
