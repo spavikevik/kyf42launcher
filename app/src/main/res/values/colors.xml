@@ -3,6 +3,11 @@
     <!-- KaiOS-faithful palette -->
     <color name="kai_blue">#00A9E0</color>        <!-- selection -->
     <color name="kai_blue_fill">#3300A9E0</color> <!-- 20% selection fill -->
+    <!-- Theme accents (paired with wallpaper_* in drawable-nodpi) -->
+    <color name="accent_sunset">#FF8A5C</color>
+    <color name="accent_forest">#3DDC97</color>
+    <color name="accent_sakura">#FF7EB6</color>
+    <color name="accent_mono">#9FB2C8</color>
     <color name="kai_orange">#F58220</color>       <!-- (legacy, unused) -->
     <color name="softkey_side">#AEB8C6</color>     <!-- side soft keys: soft gray -->
     <color name="overlay_bar_bg">#FF000000</color> <!-- opaque black, covers app top strip cleanly -->

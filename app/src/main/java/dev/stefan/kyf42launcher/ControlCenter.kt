@@ -34,7 +34,7 @@ class ControlCenter(
             addTile(R.drawable.ic_flash, "Flashlight", { toggleTorch() }) { if (torchOn) "On" else "Off" }
         }
         addTile(R.drawable.ic_bright, "Brightness", { cycleBrightness() }) { "${brightnessPct()}%" }
-        addTile(R.drawable.ic_ringer, "Ringer", { cycleRinger() }) { ringerLabel() }
+        addTile(R.drawable.ic_ringer, "Profile", { cycleRinger() }) { ringerLabel() }
         addTile(R.drawable.ic_wifi_settings, "Wi-Fi", { openPanel(Settings.Panel.ACTION_WIFI) }) { onOff(wifiOn()) }
         addTile(R.drawable.ic_bt, "Bluetooth", { open(Settings.ACTION_BLUETOOTH_SETTINGS) }) { onOff(btOn()) }
         addTile(R.drawable.ic_air, "Airplane", { open(Settings.ACTION_AIRPLANE_MODE_SETTINGS) }) { onOff(airplaneOn()) }
@@ -111,30 +111,44 @@ class ControlCenter(
 }
 
 /**
- * Shared ringer-mode helper: Control Center tile + the side manner button
- * (scancode 254 -> KEYCODE_CAMERA on the KYF42). Silent needs
+ * KaiOS-style quick profiles over the ringer modes, shared by the Control
+ * Center tile and the side manner button (scancode 254 -> KEYCODE_CAMERA):
+ * short press cycles, long press opens a picker. Silent needs
  * notification-policy access, otherwise the cycle skips it.
  */
 internal object Ringer {
-    fun cycle(ctx: Context): String {
-        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return label(ctx)
+    /** label to ringer mode, in cycle order */
+    val PROFILES = listOf(
+        "Normal" to AudioManager.RINGER_MODE_NORMAL,
+        "Meeting" to AudioManager.RINGER_MODE_VIBRATE,
+        "Silent" to AudioManager.RINGER_MODE_SILENT,
+    )
+
+    private fun am(ctx: Context) = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+    fun canSilent(ctx: Context): Boolean {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
-        val canSilent = nm?.isNotificationPolicyAccessGranted == true
-        val next = when (am.ringerMode) {
-            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-            AudioManager.RINGER_MODE_VIBRATE -> if (canSilent) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
-            else -> AudioManager.RINGER_MODE_NORMAL
-        }
-        try { am.ringerMode = next } catch (_: Exception) {}
+        return nm?.isNotificationPolicyAccessGranted == true
+    }
+
+    fun set(ctx: Context, mode: Int): String {
+        try { am(ctx)?.ringerMode = mode } catch (_: Exception) {}
         return label(ctx)
     }
 
-    fun label(ctx: Context): String {
-        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        return when (am?.ringerMode) {
-            AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
-            AudioManager.RINGER_MODE_SILENT -> "Silent"
-            else -> "Normal"
+    fun cycle(ctx: Context): String {
+        val am = am(ctx) ?: return label(ctx)
+        val next = when (am.ringerMode) {
+            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+            AudioManager.RINGER_MODE_VIBRATE ->
+                if (canSilent(ctx)) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+            else -> AudioManager.RINGER_MODE_NORMAL
         }
+        return set(ctx, next)
+    }
+
+    fun label(ctx: Context): String {
+        val mode = am(ctx)?.ringerMode
+        return PROFILES.firstOrNull { it.second == mode }?.first ?: "Normal"
     }
 }

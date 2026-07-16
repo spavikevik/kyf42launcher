@@ -6,5 +6,13 @@
         <!-- If the nav bar ever peeks (transitions), keep it invisible glass. -->
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="accentColor">@color/kai_blue</item>
     </style>
+
+    <!-- Color-theme overlays: applied on top of the base theme at runtime. -->
+    <style name="Accent.Kai" parent=""><item name="accentColor">@color/kai_blue</item></style>
+    <style name="Accent.Sunset" parent=""><item name="accentColor">@color/accent_sunset</item></style>
+    <style name="Accent.Forest" parent=""><item name="accentColor">@color/accent_forest</item></style>
+    <style name="Accent.Sakura" parent=""><item name="accentColor">@color/accent_sakura</item></style>
+    <style name="Accent.Mono" parent=""><item name="accentColor">@color/accent_mono</item></style>
 </resources>

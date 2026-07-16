@@ -3,6 +3,7 @@
        content area (home clock  OR  app grid)  +  bottom soft-key bar. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootMain"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -211,6 +212,17 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Kai carousel: recently used apps, one UP from the dock -->
+            <LinearLayout
+                android:id="@+id/carousel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone" />
+
             <!-- Favorites dock: floating translucent island (iOS-style) -->
             <LinearLayout
                 android:id="@+id/dock"
@@ -405,7 +417,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="@color/kai_blue"
+            android:textColor="?attr/accentColor"
             android:textStyle="bold"
             android:textSize="12sp"
             android:letterSpacing="0.05"

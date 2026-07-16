@@ -33,7 +33,9 @@ class LockActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val colorTheme = Themes.apply(this)
         setContentView(R.layout.activity_lock)
+        findViewById<View>(R.id.rootLock).setBackgroundResource(colorTheme.wallpaperRes)
 
         // Show over the keyguard and light the screen when armed.
         if (Build.VERSION.SDK_INT >= 27) {
@@ -132,7 +134,7 @@ class LockActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_CAMERA) {
             android.widget.Toast.makeText(
-                this, "Ringer: " + Ringer.cycle(this), android.widget.Toast.LENGTH_SHORT
+                this, "Profile: " + Ringer.cycle(this), android.widget.Toast.LENGTH_SHORT
             ).show()
         }
         return true

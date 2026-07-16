@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var homeView: View
     private lateinit var dock: LinearLayout
+    private lateinit var carousel: LinearLayout
     private lateinit var appGrid: RecyclerView
     private lateinit var notifPanel: View
     private lateinit var notifList: RecyclerView
@@ -82,10 +83,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val colorTheme = Themes.apply(this)   // accent overlay, before inflation
         setContentView(R.layout.activity_main)
+        findViewById<View>(R.id.rootMain).setBackgroundResource(colorTheme.wallpaperRes)
 
         homeView = findViewById(R.id.homeView)
         dock = findViewById(R.id.dock)
+        carousel = findViewById(R.id.carousel)
         appGrid = findViewById(R.id.appGrid)
         lsk = findViewById(R.id.lsk)
         csk = findViewById(R.id.csk)
@@ -177,7 +181,9 @@ class MainActivity : AppCompatActivity() {
         if (prefs.getBoolean("lock_wp_set", false)) return
         try {
             val wm = android.app.WallpaperManager.getInstance(this)
-            val bmp = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wallpaper)
+            val bmp = android.graphics.BitmapFactory.decodeResource(
+                resources, Themes.current(this).wallpaperRes
+            )
             wm.setBitmap(bmp, null, true, android.app.WallpaperManager.FLAG_LOCK)
             prefs.edit().putBoolean("lock_wp_set", true).apply()
         } catch (_: Exception) { /* SET_WALLPAPER unavailable: skip */ }
@@ -353,6 +359,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         hideSystemBars()   // re-assert before the window is shown (lock dismissal)
         if (::widgets.isInitialized) widgets.refresh()
+        // Recents change while we're away — keep the carousel current.
+        if (screen == Screen.HOME && ::carousel.isInitialized) buildCarousel()
         OverlayBarsService.instance?.setHidden(true)   // we draw our own bars
     }
 
@@ -527,6 +535,7 @@ class MainActivity : AppCompatActivity() {
         lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
         csk.text = ""
         rsk.text = "Controls"
+        buildCarousel()
         dock.post { dock.getChildAt(0)?.requestFocus() }
     }
 
@@ -628,13 +637,16 @@ class MainActivity : AppCompatActivity() {
     private fun buildSettings() {
         settingsRows.removeAllViews()
         addSettingsHeader("Shortcuts")
-        addSettingsRow("F3 key", targetLabel(prefs.getString("sc_f3", null))) { assignShortcut(KeyEvent.KEYCODE_F3) }
+        addSettingsRow("F3 key", targetLabel(prefs.getString("sc_f3", "action:recents"))) { assignShortcut(KeyEvent.KEYCODE_F3) }
         addSettingsRow("F4 key", targetLabel(prefs.getString("sc_f4", "action:grid"))) { assignShortcut(KeyEvent.KEYCODE_F4) }
         addSettingsHeader("Speed dial")
         for (d in 2..9) {
             val entry = prefs.getString("sd_$d", null)
             addSettingsRow("Key $d", entry?.substringAfter("|") ?: "Not set") { assignSpeedDial(d) }
         }
+        addSettingsHeader("Appearance")
+        val cur = Themes.current(this)
+        addSettingsRow("Theme", cur.label) { showThemePicker() }
         addSettingsHeader("Dock")
         addSettingsRow("Reset dock to defaults", null) {
             saveDockPkgs(emptyList()); buildDock(); buildSettings()
@@ -657,6 +669,107 @@ class MainActivity : AppCompatActivity() {
         val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
         addSettingsRow("About", "KYF42 Launcher $ver") { onAboutTap() }
         if (prefs.getBoolean("debug", false)) buildDebugSection()
+    }
+
+    // --- Kai carousel: recently used apps in a row above the dock ---
+    private fun buildCarousel() {
+        val recents = recentApps(5, exclude = dockPkgs)
+        carousel.removeAllViews()
+        carousel.visibility = if (recents.isEmpty()) View.GONE else View.VISIBLE
+        recents.forEach { app ->
+            val tile = layoutInflater.inflate(R.layout.item_carousel, carousel, false)
+            tile.findViewById<ImageView>(R.id.carIcon).setImageDrawable(app.icon)
+            tile.setOnClickListener { launchApp(app) }
+            carousel.addView(tile)
+        }
+    }
+
+    // --- Recents (KaiOS-style app switcher) ---
+    // Most-recently-used launchable apps from UsageStats (GET_USAGE_STATS).
+    private fun recentApps(max: Int, exclude: Set<String> = emptySet()): List<AppInfo> {
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE)
+            as? android.app.usage.UsageStatsManager ?: return emptyList()
+        val now = System.currentTimeMillis()
+        val events = usm.queryEvents(now - 12 * 3600_000L, now)
+        val e = android.app.usage.UsageEvents.Event()
+        val lastSeen = HashMap<String, Long>()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e)
+            if (e.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND) {
+                lastSeen[e.packageName] = e.timeStamp
+            }
+        }
+        val byPkg = apps.associateBy { it.packageName }   // launchable, excludes us
+        return lastSeen.entries.sortedByDescending { it.value }
+            .mapNotNull { byPkg[it.key] }
+            .filter { it.packageName !in exclude }
+            .take(max)
+    }
+
+    private fun showRecents() {
+        val recents = recentApps(8)
+        if (recents.isEmpty()) { toast("No recent apps"); return }
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Recent apps"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+        val iconPx = (30 * resources.displayMetrics.density).toInt()
+        recents.forEach { app ->
+            val row = sheetRow(app.label)
+            app.icon.setBounds(0, 0, iconPx, iconPx)
+            row.setCompoundDrawables(app.icon, null, null, null)
+            row.compoundDrawablePadding = (12 * resources.displayMetrics.density).toInt()
+            row.setOnClickListener { launchApp(app); dialog.dismiss() }
+            rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
+    }
+
+    // --- Quick profiles (long-press side manner button) ---
+    private fun showProfileSheet() {
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Profile"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+        val cur = Ringer.label(this)
+        Ringer.PROFILES.forEach { (name, mode) ->
+            if (name == "Silent" && !Ringer.canSilent(this)) return@forEach
+            val row = sheetRow(if (name == cur) "● $name" else name)
+            if (name == cur) row.setTextColor(Themes.accent(this))
+            row.setOnClickListener {
+                toast("Profile: " + Ringer.set(this, mode))
+                if (screen == Screen.CONTROL) control.refresh()
+                dialog.dismiss()
+            }
+            rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
+    }
+
+    // --- Color themes ---
+    private fun showThemePicker() {
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Theme"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+        val cur = Themes.current(this)
+        Themes.ALL.forEach { t ->
+            val row = sheetRow(if (t.key == cur.key) "● ${t.label}" else t.label)
+            if (t.key == cur.key) row.setTextColor(Themes.accent(this))
+            row.setOnClickListener {
+                dialog.dismiss()
+                if (t.key != cur.key) {
+                    Themes.select(this, t.key)
+                    applyLockWallpaperOnce()   // re-sync the system keyguard wallpaper
+                    recreate()                 // reload with the new accent + wallpaper
+                }
+            }
+            rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
     }
 
     // --- Debug mode ---
@@ -741,7 +854,7 @@ class MainActivity : AppCompatActivity() {
             ).apply { topMargin = (10 * resources.displayMetrics.density).toInt() }
             setPadding((4 * resources.displayMetrics.density).toInt(), 0,
                 0, (4 * resources.displayMetrics.density).toInt())
-            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.kai_blue))
+            setTextColor(Themes.accent(context))
             textSize = 12f
             letterSpacing = 0.06f
             this.text = text
@@ -771,19 +884,32 @@ class MainActivity : AppCompatActivity() {
 
     // --- KYF42 physical keys (see matrix_keypad.kl) ---
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        // Side manner button (scancode 254 -> KEYCODE_CAMERA): cycle ringer mode.
+        // Side manner button (scancode 254 -> KEYCODE_CAMERA):
+        // short press cycles profiles, long press opens the picker.
         if (keyCode == KeyEvent.KEYCODE_CAMERA) {
-            toast("Ringer: " + Ringer.cycle(this))
+            event.startTracking()
             return true
         }
+        // Dedicated APP_SWITCH key (gpio-keys 63), if the system ever delivers it.
+        if (keyCode == KeyEvent.KEYCODE_APP_SWITCH) { showRecents(); return true }
         when (screen) {
             Screen.HOME -> when (keyCode) {
-                // Up from the dock opens the app grid; Down opens notifications
-                // (F1/left soft key also opens notifications). Left/right/center
-                // fall through to the focus system for dock traversal + launch.
-                KeyEvent.KEYCODE_DPAD_UP -> { showGrid(); return true }
+                // Up from the dock steps into the carousel (if present), then the
+                // grid; Down from the carousel returns to the dock, from the dock
+                // opens notifications. Left/right/center fall through to the
+                // focus system for tile traversal + launch.
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    val inCarousel = currentFocus?.parent === carousel
+                    if (!inCarousel && carousel.visibility == View.VISIBLE && carousel.childCount > 0) {
+                        carousel.getChildAt(0).requestFocus()
+                    } else showGrid()
+                    return true
+                }
                 KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_F1 -> {
-                    showNotifications(); return true
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentFocus?.parent === carousel) {
+                        dock.getChildAt(0)?.requestFocus()
+                    } else showNotifications()
+                    return true
                 }
                 KeyEvent.KEYCODE_F2 -> { showControl(); return true }
                 // Number keys 2-9 = speed dial. Track for long-press (assign).
@@ -822,6 +948,7 @@ class MainActivity : AppCompatActivity() {
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
     // --- Speed dial (home number keys 2-9): short = call, long = (re)assign ---
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_CAMERA) { showProfileSheet(); return true }
         if (screen == Screen.HOME && keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9) {
             assignSpeedDial(keyCode - KeyEvent.KEYCODE_0)
             return true
@@ -834,6 +961,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_CAMERA && !event.isCanceled) {
+            toast("Profile: " + Ringer.cycle(this))
+            if (screen == Screen.CONTROL) control.refresh()
+            return true
+        }
         if (screen == Screen.HOME && keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 && !event.isCanceled) {
             speedDialShort(keyCode - KeyEvent.KEYCODE_0)
             return true
@@ -851,22 +983,23 @@ class MainActivity : AppCompatActivity() {
     // Built-in launcher actions selectable as a shortcut target.
     private val shortcutActions = listOf(
         "action:grid" to "App grid",
+        "action:recents" to "Recent apps",
         "action:notif" to "Notifications",
         "action:control" to "Control center",
         "action:settings" to "Settings"
     )
 
     private fun shortcutShort(keyCode: Int) {
-        // F4 defaults to the app grid; F3 defaults to unassigned.
-        val default = if (keyCode == KeyEvent.KEYCODE_F4) "action:grid" else null
-        val target = prefs.getString(shortcutKey(keyCode), default)
-        if (target == null) { assignShortcut(keyCode); return }
+        // F4 defaults to the app grid; F3 to the recents switcher.
+        val default = if (keyCode == KeyEvent.KEYCODE_F4) "action:grid" else "action:recents"
+        val target = prefs.getString(shortcutKey(keyCode), default) ?: default
         runShortcut(target) { assignShortcut(keyCode) }
     }
 
     private fun runShortcut(target: String, onMissing: () -> Unit) {
         when (target) {
             "action:grid" -> showGrid()
+            "action:recents" -> showRecents()
             "action:notif" -> showNotifications()
             "action:control" -> showControl()
             "action:settings" -> showSettings()
@@ -893,7 +1026,7 @@ class MainActivity : AppCompatActivity() {
         // Built-in actions first (cyan accent), then apps.
         shortcutActions.forEach { (token, label) ->
             val row = sheetRow(label).apply {
-                setTextColor(androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.kai_blue))
+                setTextColor(Themes.accent(this@MainActivity))
             }
             row.setOnClickListener { onPick(token, label); dialog.dismiss() }
             rows.addView(row)

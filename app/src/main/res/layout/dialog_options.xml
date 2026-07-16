@@ -26,7 +26,7 @@
         android:padding="14dp"
         android:focusable="true"
         android:background="@drawable/opt_row_bg"
-        android:textColor="@color/kai_blue"
+        android:textColor="?attr/accentColor"
         android:textSize="15sp" />
 
     <TextView
