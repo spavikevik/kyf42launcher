@@ -16,7 +16,11 @@ import android.widget.ImageView
 import android.widget.TextView
 
 /** Quick-toggle control center: flashlight, brightness, ringer, wifi/bt/airplane. */
-class ControlCenter(private val a: Activity, private val grid: GridLayout) {
+class ControlCenter(
+    private val a: Activity,
+    private val grid: GridLayout,
+    private val onSettings: () -> Unit
+) {
 
     private class Tile(val view: View, val state: TextView, val stateFn: () -> String)
     private val tiles = mutableListOf<Tile>()
@@ -34,6 +38,7 @@ class ControlCenter(private val a: Activity, private val grid: GridLayout) {
         addTile(R.drawable.ic_wifi_settings, "Wi-Fi", { openPanel(Settings.Panel.ACTION_WIFI) }) { onOff(wifiOn()) }
         addTile(R.drawable.ic_bt, "Bluetooth", { open(Settings.ACTION_BLUETOOTH_SETTINGS) }) { onOff(btOn()) }
         addTile(R.drawable.ic_air, "Airplane", { open(Settings.ACTION_AIRPLANE_MODE_SETTINGS) }) { onOff(airplaneOn()) }
+        addTile(R.drawable.ic_settings, "Settings", { onSettings() }) { "" }
         refresh()
     }
 

@@ -341,6 +341,40 @@
                 android:layout_height="wrap_content"
                 android:columnCount="3" />
         </LinearLayout>
+
+        <!-- SETTINGS -->
+        <LinearLayout
+            android:id="@+id/settingsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/grid_scrim"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="10dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                android:text="Settings"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp" />
+
+            <ScrollView
+                android:id="@+id/settingsScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:id="@+id/settingsRows"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </ScrollView>
+        </LinearLayout>
     </FrameLayout>
 
     <!-- SOFT-KEY BAR: LSK (F1) | SELECT (center) | RSK (F2) -->

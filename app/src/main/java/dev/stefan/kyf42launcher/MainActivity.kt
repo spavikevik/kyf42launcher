@@ -47,7 +47,7 @@ internal val CELL_ICONS = intArrayOf(
     R.drawable.ic_cell_3, R.drawable.ic_cell_4
 )
 
-private enum class Screen { HOME, GRID, NOTIF, CONTROL }
+private enum class Screen { HOME, GRID, NOTIF, CONTROL, SETTINGS }
 
 class MainActivity : AppCompatActivity() {
 
@@ -59,6 +59,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifEmpty: View
     private lateinit var controlPanel: View
     private lateinit var control: ControlCenter
+    private lateinit var settingsPanel: View
+    private lateinit var settingsRows: LinearLayout
     private val notifData = mutableListOf<StatusBarNotification>()
     private lateinit var lsk: TextView
     private lateinit var csk: TextView
@@ -119,8 +121,10 @@ class MainActivity : AppCompatActivity() {
         LockListenerService.onChange = { runOnUiThread { onNotifsChanged() } }
 
         controlPanel = findViewById(R.id.controlPanel)
-        control = ControlCenter(this, findViewById(R.id.ctrlGrid))
+        control = ControlCenter(this, findViewById(R.id.ctrlGrid)) { showSettings() }
         control.build()
+        settingsPanel = findViewById(R.id.settingsPanel)
+        settingsRows = findViewById(R.id.settingsRows)
 
         widgets = HomeWidgets(
             this,
@@ -500,6 +504,7 @@ class MainActivity : AppCompatActivity() {
         gridContainer.visibility = View.GONE
         notifPanel.visibility = View.GONE
         controlPanel.visibility = View.GONE
+        settingsPanel.visibility = View.GONE
         val n = LockListenerService.instance?.current()?.size ?: 0
         lsk.text = if (n > 0) "● $n Alerts" else "Alerts"
         csk.text = ""
@@ -512,6 +517,7 @@ class MainActivity : AppCompatActivity() {
         homeView.visibility = View.GONE
         notifPanel.visibility = View.GONE
         controlPanel.visibility = View.GONE
+        settingsPanel.visibility = View.GONE
         gridContainer.visibility = View.VISIBLE
         // Reset any prior search (without triggering the IME).
         if (gridSearch.text.isNotEmpty()) gridSearch.setText("")
@@ -533,6 +539,7 @@ class MainActivity : AppCompatActivity() {
         homeView.visibility = View.GONE
         gridContainer.visibility = View.GONE
         controlPanel.visibility = View.GONE
+        settingsPanel.visibility = View.GONE
         notifPanel.visibility = View.VISIBLE
         lsk.text = "Clear all"
         csk.text = "OPEN"
@@ -576,11 +583,90 @@ class MainActivity : AppCompatActivity() {
         homeView.visibility = View.GONE
         gridContainer.visibility = View.GONE
         notifPanel.visibility = View.GONE
+        settingsPanel.visibility = View.GONE
         controlPanel.visibility = View.VISIBLE
         lsk.text = ""; csk.text = ""; rsk.text = ""
         control.refresh()
         controlPanel.post { control.firstView()?.requestFocus() }
     }
+
+    // --- Settings ---
+    private fun showSettings() {
+        screen = Screen.SETTINGS
+        homeView.visibility = View.GONE
+        gridContainer.visibility = View.GONE
+        notifPanel.visibility = View.GONE
+        controlPanel.visibility = View.GONE
+        settingsPanel.visibility = View.GONE
+        settingsPanel.visibility = View.VISIBLE
+        lsk.text = ""; csk.text = ""; rsk.text = ""
+        buildSettings()
+        settingsRows.post {
+            (0 until settingsRows.childCount).map { settingsRows.getChildAt(it) }
+                .firstOrNull { it.isFocusable }?.requestFocus()
+        }
+    }
+
+    private fun buildSettings() {
+        settingsRows.removeAllViews()
+        addSettingsHeader("Shortcuts")
+        addSettingsRow("F3 key", targetLabel(prefs.getString("sc_f3", null))) { assignShortcut(KeyEvent.KEYCODE_F3) }
+        addSettingsRow("F4 key", targetLabel(prefs.getString("sc_f4", "action:grid"))) { assignShortcut(KeyEvent.KEYCODE_F4) }
+        addSettingsHeader("Speed dial")
+        for (d in 2..9) {
+            val entry = prefs.getString("sd_$d", null)
+            addSettingsRow("Key $d", entry?.substringAfter("|") ?: "Not set") { assignSpeedDial(d) }
+        }
+        addSettingsHeader("Dock")
+        addSettingsRow("Reset dock to defaults", null) {
+            saveDockPkgs(emptyList()); buildDock(); buildSettings()
+        }
+        addSettingsHeader("System")
+        addSettingsRow("Notification access", null) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
+        addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
+        addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
+    }
+
+    private fun targetLabel(token: String?): String = when {
+        token == null -> "Not set"
+        token.startsWith("action:") -> shortcutActions.firstOrNull { it.first == token }?.second ?: token
+        else -> labelFor(token)
+    }
+
+    private fun addSettingsHeader(text: String) {
+        val tv = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = (10 * resources.displayMetrics.density).toInt() }
+            setPadding((4 * resources.displayMetrics.density).toInt(), 0,
+                0, (4 * resources.displayMetrics.density).toInt())
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.kai_blue))
+            textSize = 12f
+            letterSpacing = 0.06f
+            this.text = text
+        }
+        settingsRows.addView(tv)
+    }
+
+    private fun addSettingsRow(title: String, value: String?, onClick: () -> Unit) {
+        val v = layoutInflater.inflate(R.layout.item_setting, settingsRows, false)
+        v.findViewById<TextView>(R.id.setTitle).text = title
+        val valView = v.findViewById<TextView>(R.id.setValue)
+        if (value != null) { valView.text = value; valView.visibility = View.VISIBLE }
+        v.setOnClickListener { onClick() }
+        settingsRows.addView(v)
+    }
+
+    private fun openSetting(action: String) =
+        try { startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+
+    private fun openAppDetails(pkg: String) =
+        try {
+            startActivity(
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (_: Exception) {}
 
     // --- KYF42 physical keys (see matrix_keypad.kl) ---
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -613,6 +699,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             Screen.CONTROL -> {}   // tiles handle focus/center; Back exits (onBackPressed)
+            Screen.SETTINGS -> {}  // rows handle focus/center; Back exits (onBackPressed)
             Screen.NOTIF -> when (keyCode) {
                 KeyEvent.KEYCODE_F1 -> {   // left soft key = Clear all
                     try { LockListenerService.instance?.cancelAllNotifications() } catch (_: Exception) {}
@@ -659,7 +746,8 @@ class MainActivity : AppCompatActivity() {
     private val shortcutActions = listOf(
         "action:grid" to "App grid",
         "action:notif" to "Notifications",
-        "action:control" to "Control center"
+        "action:control" to "Control center",
+        "action:settings" to "Settings"
     )
 
     private fun shortcutShort(keyCode: Int) {
@@ -675,6 +763,7 @@ class MainActivity : AppCompatActivity() {
             "action:grid" -> showGrid()
             "action:notif" -> showNotifications()
             "action:control" -> showControl()
+            "action:settings" -> showSettings()
             else -> packageManager.getLaunchIntentForPackage(target)?.let {
                 try { startActivity(it) } catch (_: Exception) {}
             } ?: onMissing()
@@ -686,6 +775,7 @@ class MainActivity : AppCompatActivity() {
         showShortcutPicker("Assign $name to:") { token, label ->
             prefs.edit().putString(shortcutKey(keyCode), token).apply()
             android.widget.Toast.makeText(this, "$name → $label", android.widget.Toast.LENGTH_SHORT).show()
+            if (screen == Screen.SETTINGS) buildSettings()
         }
     }
 
@@ -757,6 +847,7 @@ class MainActivity : AppCompatActivity() {
                     android.widget.Toast.makeText(
                         this, "Speed dial $pendingSpeedDial → $name", android.widget.Toast.LENGTH_SHORT
                     ).show()
+                    if (screen == Screen.SETTINGS) buildSettings()
                 }
             }
         } catch (_: Exception) {}
@@ -770,7 +861,8 @@ class MainActivity : AppCompatActivity() {
             appGrid.layoutManager?.findViewByPosition(0)?.requestFocus()
             return
         }
-        if (screen == Screen.GRID || screen == Screen.NOTIF || screen == Screen.CONTROL) showHome()
+        if (screen == Screen.GRID || screen == Screen.NOTIF ||
+            screen == Screen.CONTROL || screen == Screen.SETTINGS) showHome()
         // else: stay on home (do nothing)
     }
 }
