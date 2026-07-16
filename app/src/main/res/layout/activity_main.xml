@@ -89,9 +89,10 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="54dp"
+                android:layout_marginTop="46dp"
+                android:paddingStart="26dp"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:gravity="start">
 
                 <TextClock
                     android:id="@+id/clock"
@@ -105,7 +106,7 @@
                     android:shadowColor="#40000000"
                     android:shadowDy="2"
                     android:shadowRadius="8"
-                    android:textSize="72sp" />
+                    android:textSize="58sp" />
 
                 <TextClock
                     android:id="@+id/dateClock"
@@ -121,24 +122,16 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <!-- Glanceable info card: weather / next event / next alarm -->
+            <!-- Glanceable info block: free-floating under the clock (no card
+                 chrome); text shadows keep it legible on any wallpaper. -->
             <LinearLayout
                 android:id="@+id/infoCard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="12dp"
+                android:layout_gravity="start"
+                android:layout_marginStart="27dp"
+                android:layout_marginTop="20dp"
                 android:orientation="vertical"
-                android:background="@drawable/infocard_bg"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp"
-                android:paddingTop="11dp"
-                android:paddingBottom="11dp"
                 android:visibility="gone">
 
                 <LinearLayout
@@ -160,6 +153,9 @@
                         android:layout_marginStart="9dp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/text_primary"
+                        android:shadowColor="#40000000"
+                        android:shadowDy="2"
+                        android:shadowRadius="6"
                         android:textSize="21sp" />
                     <TextView
                         android:id="@+id/wxCond"
@@ -167,6 +163,9 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="9dp"
                         android:textColor="@color/text_secondary"
+                        android:shadowColor="#40000000"
+                        android:shadowDy="2"
+                        android:shadowRadius="4"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -192,6 +191,9 @@
                         android:ellipsize="end"
                         android:maxWidth="220dp"
                         android:textColor="@color/text_primary"
+                        android:shadowColor="#40000000"
+                        android:shadowDy="2"
+                        android:shadowRadius="4"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -214,9 +216,17 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="9dp"
                         android:textColor="@color/text_primary"
+                        android:shadowColor="#40000000"
+                        android:shadowDy="2"
+                        android:shadowRadius="4"
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
             <!-- Favorites dock: floating translucent island (iOS-style) -->
             <LinearLayout
@@ -234,17 +244,16 @@
                 android:paddingBottom="7dp" />
         </LinearLayout>
 
-        <!-- Kai carousel: recent apps in a vertical rail beside the info card,
-             one UP from the dock. Overlay so it never displaces the column. -->
+        <!-- Kai carousel: recent apps in a vertical rail centered on the right
+             edge, one UP from the dock. Overlay so it never displaces the column. -->
         <LinearLayout
             android:id="@+id/carousel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
+            android:layout_gravity="center_vertical|end"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:layout_marginEnd="4dp"
-            android:layout_marginBottom="78dp"
+            android:layout_marginEnd="10dp"
             android:visibility="gone" />
         </FrameLayout>
 
