@@ -5,6 +5,7 @@
     <color name="kai_blue_fill">#3300A9E0</color> <!-- 20% selection fill -->
     <color name="kai_orange">#F58220</color>       <!-- (legacy, unused) -->
     <color name="softkey_side">#AEB8C6</color>     <!-- side soft keys: soft gray -->
+    <color name="overlay_bar_bg">#FF000000</color> <!-- opaque black, covers app top strip cleanly -->
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#B8C0CC</color>
     <color name="bar_scrim">#73000000</color>      <!-- translucent status/softkey bars -->

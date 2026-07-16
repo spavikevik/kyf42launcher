@@ -5,11 +5,9 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:background="@drawable/topbar_fade"
+    android:background="@color/overlay_bar_bg"
     android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    android:paddingTop="3dp"
-    android:paddingBottom="3dp">
+    android:paddingEnd="8dp">
 
     <ImageView
         android:id="@+id/ovWifi"

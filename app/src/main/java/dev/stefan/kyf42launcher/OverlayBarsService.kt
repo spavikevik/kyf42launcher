@@ -57,16 +57,23 @@ class OverlayBarsService : Service() {
         if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
 
-    private fun params(gravity: Int): WindowManager.LayoutParams =
+    private fun params(gravity: Int, height: Int): WindowManager.LayoutParams =
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            height,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply { this.gravity = gravity }
+
+    // Native status-bar height, so the opaque top bar reads as a real status bar.
+    private fun statusBarHeight(): Int {
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id)
+        else (24 * resources.displayMetrics.density).toInt()
+    }
 
     private fun addBars() {
         val inf = LayoutInflater.from(this)
@@ -77,8 +84,8 @@ class OverlayBarsService : Service() {
         ovCarrier = top.findViewById(R.id.ovCarrier)
         ovBattery = top.findViewById(R.id.ovBattery)
         try {
-            wm.addView(top, params(Gravity.TOP))
-            wm.addView(bottom, params(Gravity.BOTTOM))
+            wm.addView(top, params(Gravity.TOP, statusBarHeight()))
+            wm.addView(bottom, params(Gravity.BOTTOM, WindowManager.LayoutParams.WRAP_CONTENT))
             topView = top; bottomView = bottom
         } catch (_: Exception) { /* overlay permission missing */ }
     }
