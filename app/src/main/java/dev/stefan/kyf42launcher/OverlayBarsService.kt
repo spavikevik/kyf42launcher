@@ -28,15 +28,14 @@ import android.widget.ImageView
 import android.widget.TextView
 
 /**
- * Draws the launcher's top status bar and bottom bar as system overlays so they
- * appear over other apps too. Hidden while our own launcher/lock is foreground
- * (those draw their own bars). Requires SYSTEM_ALERT_WINDOW.
+ * Draws the launcher's top status bar as a system overlay so it appears over
+ * other apps too. Hidden while our own launcher/lock is foreground (those draw
+ * their own bars). Requires SYSTEM_ALERT_WINDOW.
  */
 class OverlayBarsService : Service() {
 
     private lateinit var wm: WindowManager
     private var topView: View? = null
-    private var bottomView: View? = null
 
     private lateinit var ovWifi: ImageView
     private lateinit var ovSignal: ImageView
@@ -84,7 +83,6 @@ class OverlayBarsService : Service() {
     private fun addBars() {
         val inf = LayoutInflater.from(this)
         val top = inf.inflate(R.layout.overlay_topbar, null)
-        val bottom = inf.inflate(R.layout.overlay_bottombar, null)
         ovWifi = top.findViewById(R.id.ovWifi)
         ovSignal = top.findViewById(R.id.ovSignal)
         ovCarrier = top.findViewById(R.id.ovCarrier)
@@ -93,15 +91,13 @@ class OverlayBarsService : Service() {
         val sbh = statusBarHeight()
         top.findViewById<View>(R.id.ovStatusRow).layoutParams.height = sbh
         val appBar = (19 * resources.displayMetrics.density).toInt()
-        // Start hidden: only the poller may show the bars, once it confirms a
+        // Start hidden: only the poller may show the bar, once it confirms a
         // foreign app is actually foreground (prevents flashes over our home).
         top.visibility = View.GONE
-        bottom.visibility = View.GONE
         try {
             // Cover the status bar + the app's action/title bar with the app name.
             wm.addView(top, params(Gravity.TOP, sbh + appBar))
-            wm.addView(bottom, params(Gravity.BOTTOM, WindowManager.LayoutParams.WRAP_CONTENT))
-            topView = top; bottomView = bottom
+            topView = top
         } catch (_: Exception) { /* overlay permission missing */ }
     }
 
@@ -117,9 +113,7 @@ class OverlayBarsService : Service() {
     }
 
     private fun setVisible(visible: Boolean) {
-        val v = if (visible) View.VISIBLE else View.GONE
-        topView?.visibility = v
-        bottomView?.visibility = v
+        topView?.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     private val poller = object : Runnable {
@@ -210,7 +204,6 @@ class OverlayBarsService : Service() {
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
         telephony?.listen(signalListener, PhoneStateListener.LISTEN_NONE)
         try { topView?.let { wm.removeView(it) } } catch (_: Exception) {}
-        try { bottomView?.let { wm.removeView(it) } } catch (_: Exception) {}
     }
 
     companion object {
