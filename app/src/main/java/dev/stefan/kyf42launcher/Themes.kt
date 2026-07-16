@@ -19,7 +19,7 @@ data class LauncherTheme(
  */
 object Themes {
     val ALL = listOf(
-        LauncherTheme("kai", "Kai Cyan", R.style.Accent_Kai, R.drawable.wallpaper),
+        LauncherTheme("kai", "Ocean", R.style.Accent_Kai, R.drawable.wallpaper),
         LauncherTheme("sunset", "Sunset", R.style.Accent_Sunset, R.drawable.wallpaper_sunset),
         LauncherTheme("forest", "Forest", R.style.Accent_Forest, R.drawable.wallpaper_forest),
         LauncherTheme("sakura", "Sakura", R.style.Accent_Sakura, R.drawable.wallpaper_sakura),
