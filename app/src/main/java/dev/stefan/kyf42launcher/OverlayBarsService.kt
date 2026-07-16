@@ -92,7 +92,7 @@ class OverlayBarsService : Service() {
         ovAppName = top.findViewById(R.id.ovAppName)
         val sbh = statusBarHeight()
         top.findViewById<View>(R.id.ovStatusRow).layoutParams.height = sbh
-        val appBar = (44 * resources.displayMetrics.density).toInt()
+        val appBar = (19 * resources.displayMetrics.density).toInt()
         try {
             // Cover the status bar + the app's action/title bar with the app name.
             wm.addView(top, params(Gravity.TOP, sbh + appBar))
@@ -119,14 +119,17 @@ class OverlayBarsService : Service() {
 
     private fun updateAppName() {
         val pkg = currentApp() ?: return
-        if (pkg == packageName) return   // our launcher; overlay is hidden then anyway
+        if (pkg == packageName) {
+            ovAppName.text = ""
+            return
+        }   // our launcher; overlay is hidden then anyway
         ovAppName.text = labelOf(pkg)
     }
 
     private fun currentApp(): String? {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
         val now = System.currentTimeMillis()
-        val events = usm.queryEvents(now - 10_000, now)
+        val events = usm.queryEvents(now - 8_000, now)
         var last: String? = null
         val e = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -201,6 +204,6 @@ class OverlayBarsService : Service() {
     companion object {
         @JvmStatic
         var instance: OverlayBarsService? = null
-        private const val POLL_MS = 1500L
+        private const val POLL_MS = 350L
     }
 }

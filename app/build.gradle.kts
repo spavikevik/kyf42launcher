@@ -10,6 +10,7 @@ android {
     defaultConfig {
         applicationId = "dev.stefan.kyf42launcher"
         minSdk = 21
+        //noinspection ExpiredTargetSdkVersion
         targetSdk = 29
         versionCode = 1
         versionName = "0.1"
