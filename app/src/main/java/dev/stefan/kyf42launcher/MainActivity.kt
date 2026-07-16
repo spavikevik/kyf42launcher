@@ -625,6 +625,78 @@ class MainActivity : AppCompatActivity() {
         addSettingsRow("Notification access", null) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
+        val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
+        addSettingsRow("About", "KYF42 Launcher $ver") { onAboutTap() }
+        if (prefs.getBoolean("debug", false)) buildDebugSection()
+    }
+
+    // --- Debug mode ---
+    private var aboutTaps = 0
+    private fun onAboutTap() {
+        if (prefs.getBoolean("debug", false)) return
+        if (++aboutTaps >= 7) {
+            prefs.edit().putBoolean("debug", true).apply()
+            toast("Debug mode enabled")
+            buildSettings()
+        } else if (aboutTaps >= 4) {
+            toast("${7 - aboutTaps} more to enable debug")
+        }
+    }
+
+    private fun buildDebugSection() {
+        addSettingsHeader("Debug")
+        addSettingsRow("Stay awake while charging", onOffStr(stayAwakeOn())) {
+            setStayAwake(!stayAwakeOn()); buildSettings()
+        }
+        addSettingsRow("Long screen timeout (10 min)", onOffStr(screenTimeoutLong())) {
+            setScreenTimeoutLong(!screenTimeoutLong()); buildSettings()
+        }
+        addSettingsRow("Lock immediately on sleep", onOffStr(lockImmediate())) {
+            setLockImmediate(!lockImmediate()); buildSettings()
+        }
+        addSettingsRow("Restore device settings to defaults", null) {
+            setStayAwake(false); setScreenTimeoutLong(false); setLockImmediate(false)
+            toast("Device settings restored"); buildSettings()
+        }
+        addSettingsRow("Android", android.os.Build.VERSION.RELEASE) {}
+        val dm = resources.displayMetrics
+        addSettingsRow("Screen", "${dm.widthPixels}x${dm.heightPixels} @${dm.densityDpi}dpi") {}
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        addSettingsRow("Notification access",
+            if (nm?.isNotificationListenerAccessGranted(
+                    android.content.ComponentName(this, LockListenerService::class.java)) == true) "Granted" else "Not granted"
+        ) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
+        addSettingsRow("Draw over apps",
+            if (android.provider.Settings.canDrawOverlays(this)) "Granted" else "Not granted") {}
+        addSettingsRow("Disable debug mode", null) {
+            prefs.edit().putBoolean("debug", false).apply(); aboutTaps = 0; buildSettings()
+        }
+    }
+
+    private fun toast(m: String) = android.widget.Toast.makeText(this, m, android.widget.Toast.LENGTH_SHORT).show()
+    private fun onOffStr(b: Boolean) = if (b) "On" else "Off"
+
+    // Device-setting toggles (need WRITE_SETTINGS / WRITE_SECURE_SETTINGS).
+    private fun stayAwakeOn() =
+        android.provider.Settings.Global.getInt(contentResolver, android.provider.Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0) != 0
+    private fun setStayAwake(on: Boolean) = putSecureGlobal {
+        android.provider.Settings.Global.putInt(contentResolver, android.provider.Settings.Global.STAY_ON_WHILE_PLUGGED_IN, if (on) 3 else 0)
+    }
+    private fun screenTimeoutLong() =
+        (try { android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.SCREEN_OFF_TIMEOUT) } catch (_: Exception) { 60000 }) >= 300000
+    private fun setScreenTimeoutLong(long: Boolean) {
+        if (!android.provider.Settings.System.canWrite(this)) { toast("Grant WRITE_SETTINGS"); return }
+        android.provider.Settings.System.putInt(contentResolver, android.provider.Settings.System.SCREEN_OFF_TIMEOUT, if (long) 600000 else 30000)
+    }
+    private fun lockImmediate() =
+        android.provider.Settings.Secure.getLong(contentResolver, "lock_screen_lock_after_timeout", 5000L) == 0L
+    private fun setLockImmediate(on: Boolean) = putSecureGlobal {
+        android.provider.Settings.Secure.putLong(contentResolver, "lock_screen_lock_after_timeout", if (on) 0L else 5000L)
+    }
+    private inline fun putSecureGlobal(block: () -> Unit) {
+        try { block() } catch (_: SecurityException) {
+            toast("Grant: adb shell pm grant $packageName android.permission.WRITE_SECURE_SETTINGS")
+        } catch (_: Exception) {}
     }
 
     private fun targetLabel(token: String?): String = when {
