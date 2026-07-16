@@ -53,6 +53,11 @@
             android:configChanges="keyboardHidden|navigation|orientation|screenSize"
             android:theme="@style/Theme.KYF42Launcher" />
 
+        <!-- Draws the top/bottom bars as overlays over other apps -->
+        <service
+            android:name=".OverlayBarsService"
+            android:exported="false" />
+
         <!-- Process anchor so our SCREEN_OFF receiver survives (Notification Access) -->
         <service
             android:name=".LockListenerService"

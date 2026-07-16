@@ -145,6 +145,15 @@ class MainActivity : AppCompatActivity() {
         // Screen off -> pre-arm our (cosmetic) lock screen for non-secure devices.
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         applyLockWallpaperOnce()
+        updateOverlayBars()
+    }
+
+    // Start/stop the system-wide bars per the setting + overlay permission.
+    private fun updateOverlayBars() {
+        val on = prefs.getBoolean("overlay_bars", true) &&
+            android.provider.Settings.canDrawOverlays(this)
+        val intent = Intent(this, OverlayBarsService::class.java)
+        if (on) startService(intent) else stopService(intent)
     }
 
     private val screenOffReceiver = object : BroadcastReceiver() {
@@ -344,6 +353,12 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         hideSystemBars()   // re-assert before the window is shown (lock dismissal)
         if (::widgets.isInitialized) widgets.refresh()
+        OverlayBarsService.instance?.setHidden(true)   // we draw our own bars
+    }
+
+    override fun onPause() {
+        super.onPause()
+        OverlayBarsService.instance?.setHidden(false)  // another app -> show overlay bars
     }
 
     // --- CORE (yours to tune): enumerate launchable apps ---
@@ -622,6 +637,17 @@ class MainActivity : AppCompatActivity() {
             saveDockPkgs(emptyList()); buildDock(); buildSettings()
         }
         addSettingsHeader("System")
+        addSettingsRow("Bars over other apps", onOffStr(prefs.getBoolean("overlay_bars", true))) {
+            val now = !prefs.getBoolean("overlay_bars", true)
+            prefs.edit().putBoolean("overlay_bars", now).apply()
+            if (now && !android.provider.Settings.canDrawOverlays(this)) {
+                toast("Grant 'Draw over apps' first")
+                openSetting(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            }
+            updateOverlayBars()
+            OverlayBarsService.instance?.setHidden(true)  // launcher is foreground now
+            buildSettings()
+        }
         addSettingsRow("Notification access", null) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }

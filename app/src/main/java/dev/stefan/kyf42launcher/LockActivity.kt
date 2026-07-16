@@ -113,6 +113,16 @@ class LockActivity : AppCompatActivity() {
         if (hasFocus) hideSystemBars()
     }
 
+    override fun onResume() {
+        super.onResume()
+        OverlayBarsService.instance?.setHidden(true)   // lock draws its own bar
+    }
+
+    override fun onPause() {
+        super.onPause()
+        OverlayBarsService.instance?.setHidden(false)
+    }
+
     // Swallow ALL downs; unlock on center key UP. Dismissing on down lets the
     // paired up-event leak to the home window underneath (launched the dialer).
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = true
