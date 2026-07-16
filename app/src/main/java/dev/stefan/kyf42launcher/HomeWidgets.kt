@@ -6,14 +6,18 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.os.Build
 import android.provider.CalendarContract
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -59,6 +63,7 @@ class HomeWidgets(
     }
 
     // --- Next calendar event in the next 36h ---
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun updateCalendar() {
         if (activity.checkSelfPermission(Manifest.permission.READ_CALENDAR)
             != PackageManager.PERMISSION_GRANTED
@@ -66,8 +71,15 @@ class HomeWidgets(
             rowEvent.visibility = View.GONE
             return
         }
-        val now = System.currentTimeMillis()
-        val end = now + 36L * 3600 * 1000
+        val now = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val end = LocalDateTime.now().atZone(ZoneId.systemDefault())
+            .withHour(23)
+            .withMinute(59)
+            .withSecond(0)
+            .withNano(0)
+            .toInstant()
+            .toEpochMilli()
+
         val proj = arrayOf(
             CalendarContract.Instances.TITLE,
             CalendarContract.Instances.BEGIN

@@ -143,8 +143,8 @@
                     android:visibility="gone">
                     <ImageView
                         android:id="@+id/wxIcon"
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:contentDescription="@null" />
                     <TextView
                         android:id="@+id/wxTemp"
@@ -156,7 +156,7 @@
                         android:shadowColor="#40000000"
                         android:shadowDy="2"
                         android:shadowRadius="6"
-                        android:textSize="21sp" />
+                        android:textSize="12sp" />
                     <TextView
                         android:id="@+id/wxCond"
                         android:layout_width="wrap_content"
@@ -166,7 +166,7 @@
                         android:shadowColor="#40000000"
                         android:shadowDy="2"
                         android:shadowRadius="4"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -178,8 +178,8 @@
                     android:gravity="center_vertical"
                     android:visibility="gone">
                     <ImageView
-                        android:layout_width="15dp"
-                        android:layout_height="15dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:src="@drawable/ic_event"
                         android:contentDescription="@null" />
                     <TextView
@@ -206,8 +206,8 @@
                     android:gravity="center_vertical"
                     android:visibility="gone">
                     <ImageView
-                        android:layout_width="15dp"
-                        android:layout_height="15dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:src="@drawable/ic_alarm"
                         android:contentDescription="@null" />
                     <TextView
