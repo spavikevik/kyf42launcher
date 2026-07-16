@@ -771,6 +771,11 @@ class MainActivity : AppCompatActivity() {
 
     // --- KYF42 physical keys (see matrix_keypad.kl) ---
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // Side manner button (scancode 254 -> KEYCODE_CAMERA): cycle ringer mode.
+        if (keyCode == KeyEvent.KEYCODE_CAMERA) {
+            toast("Ringer: " + Ringer.cycle(this))
+            return true
+        }
         when (screen) {
             Screen.HOME -> when (keyCode) {
                 // Up from the dock opens the app grid; Down opens notifications

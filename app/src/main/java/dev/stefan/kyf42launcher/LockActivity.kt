@@ -128,7 +128,15 @@ class LockActivity : AppCompatActivity() {
 
     // Swallow ALL downs; unlock on center key UP. Dismissing on down lets the
     // paired up-event leak to the home window underneath (launched the dialer).
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = true
+    // Side manner button (KEYCODE_CAMERA) still works while locked.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_CAMERA) {
+            android.widget.Toast.makeText(
+                this, "Ringer: " + Ringer.cycle(this), android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+        return true
+    }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {

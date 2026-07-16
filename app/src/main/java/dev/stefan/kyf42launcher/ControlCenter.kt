@@ -95,26 +95,8 @@ class ControlCenter(
     private fun brightnessPct(): Int = (brightness() * 100 / 255)
 
     // --- Ringer (silent needs notification-policy access) ---
-    private fun cycleRinger() {
-        val am = a.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-        val nm = a.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
-        val canSilent = nm?.isNotificationPolicyAccessGranted == true
-        val next = when (am.ringerMode) {
-            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-            AudioManager.RINGER_MODE_VIBRATE -> if (canSilent) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
-            else -> AudioManager.RINGER_MODE_NORMAL
-        }
-        try { am.ringerMode = next } catch (_: Exception) {}
-    }
-
-    private fun ringerLabel(): String {
-        val am = a.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        return when (am?.ringerMode) {
-            AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
-            AudioManager.RINGER_MODE_SILENT -> "Silent"
-            else -> "Normal"
-        }
-    }
+    private fun cycleRinger() { Ringer.cycle(a) }
+    private fun ringerLabel(): String = Ringer.label(a)
 
     // --- State readers ---
     private fun wifiOn(): Boolean =
@@ -126,4 +108,33 @@ class ControlCenter(
     private fun open(action: String) =
         try { a.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
     private fun openPanel(action: String) = open(action)
+}
+
+/**
+ * Shared ringer-mode helper: Control Center tile + the side manner button
+ * (scancode 254 -> KEYCODE_CAMERA on the KYF42). Silent needs
+ * notification-policy access, otherwise the cycle skips it.
+ */
+internal object Ringer {
+    fun cycle(ctx: Context): String {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return label(ctx)
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        val canSilent = nm?.isNotificationPolicyAccessGranted == true
+        val next = when (am.ringerMode) {
+            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+            AudioManager.RINGER_MODE_VIBRATE -> if (canSilent) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+            else -> AudioManager.RINGER_MODE_NORMAL
+        }
+        try { am.ringerMode = next } catch (_: Exception) {}
+        return label(ctx)
+    }
+
+    fun label(ctx: Context): String {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        return when (am?.ringerMode) {
+            AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
+            AudioManager.RINGER_MODE_SILENT -> "Silent"
+            else -> "Normal"
+        }
+    }
 }
