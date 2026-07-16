@@ -93,6 +93,10 @@ class OverlayBarsService : Service() {
         val sbh = statusBarHeight()
         top.findViewById<View>(R.id.ovStatusRow).layoutParams.height = sbh
         val appBar = (19 * resources.displayMetrics.density).toInt()
+        // Start hidden: only the poller may show the bars, once it confirms a
+        // foreign app is actually foreground (prevents flashes over our home).
+        top.visibility = View.GONE
+        bottom.visibility = View.GONE
         try {
             // Cover the status bar + the app's action/title bar with the app name.
             wm.addView(top, params(Gravity.TOP, sbh + appBar))
@@ -101,29 +105,37 @@ class OverlayBarsService : Service() {
         } catch (_: Exception) { /* overlay permission missing */ }
     }
 
-    /** Hide over our own launcher/lock (they draw their own bars). */
+    /**
+     * Hide over our own launcher/lock (they draw their own bars). Hiding is
+     * immediate; showing is deferred to the poller so the bars never flash
+     * over our own screens during activity transitions (home -> app launch,
+     * lock -> home).
+     */
     fun setHidden(hidden: Boolean) {
-        val v = if (hidden) View.GONE else View.VISIBLE
+        handler.removeCallbacks(poller)
+        if (hidden) setVisible(false) else poller.run()
+    }
+
+    private fun setVisible(visible: Boolean) {
+        val v = if (visible) View.VISIBLE else View.GONE
         topView?.visibility = v
         bottomView?.visibility = v
-        handler.removeCallbacks(poller)
-        if (!hidden) { updateAppName(); handler.postDelayed(poller, POLL_MS) }
     }
 
     private val poller = object : Runnable {
         override fun run() {
-            updateAppName()
+            // null = no recent foreground event; keep current state.
+            currentApp()?.let { pkg ->
+                if (pkg == packageName) {
+                    ovAppName.text = ""
+                    setVisible(false)
+                } else {
+                    ovAppName.text = labelOf(pkg)
+                    setVisible(true)
+                }
+            }
             handler.postDelayed(this, POLL_MS)
         }
-    }
-
-    private fun updateAppName() {
-        val pkg = currentApp() ?: return
-        if (pkg == packageName) {
-            ovAppName.text = ""
-            return
-        }   // our launcher; overlay is hidden then anyway
-        ovAppName.text = labelOf(pkg)
     }
 
     private fun currentApp(): String? {

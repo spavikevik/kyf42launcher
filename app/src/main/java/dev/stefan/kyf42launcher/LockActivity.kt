@@ -118,8 +118,11 @@ class LockActivity : AppCompatActivity() {
         OverlayBarsService.instance?.setHidden(true)   // lock draws its own bar
     }
 
-    override fun onPause() {
-        super.onPause()
+    // onStop (not onPause): fires only after whatever replaces us has drawn,
+    // so the overlay bars can't flash over our own lock/home during the
+    // unlock transition. The poller keeps them hidden over our own screens.
+    override fun onStop() {
+        super.onStop()
         OverlayBarsService.instance?.setHidden(false)
     }
 

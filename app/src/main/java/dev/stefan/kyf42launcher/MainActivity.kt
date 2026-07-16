@@ -356,8 +356,11 @@ class MainActivity : AppCompatActivity() {
         OverlayBarsService.instance?.setHidden(true)   // we draw our own bars
     }
 
-    override fun onPause() {
-        super.onPause()
+    // onStop (not onPause): it fires only after the covering activity has
+    // actually drawn, so the bars never flash over the still-visible home
+    // while a slow app is cold-starting.
+    override fun onStop() {
+        super.onStop()
         OverlayBarsService.instance?.setHidden(false)  // another app -> show overlay bars
     }
 
