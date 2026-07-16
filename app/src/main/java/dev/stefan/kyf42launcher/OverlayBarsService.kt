@@ -1,6 +1,8 @@
 package dev.stefan.kyf42launcher
 
 import android.app.Service
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -12,7 +14,9 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.telephony.PhoneStateListener
 import android.telephony.SignalStrength
 import android.telephony.TelephonyManager
@@ -38,8 +42,10 @@ class OverlayBarsService : Service() {
     private lateinit var ovSignal: ImageView
     private lateinit var ovCarrier: TextView
     private lateinit var ovBattery: TextView
+    private lateinit var ovAppName: TextView
     private var telephony: TelephonyManager? = null
     private var connectivity: ConnectivityManager? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -83,8 +89,13 @@ class OverlayBarsService : Service() {
         ovSignal = top.findViewById(R.id.ovSignal)
         ovCarrier = top.findViewById(R.id.ovCarrier)
         ovBattery = top.findViewById(R.id.ovBattery)
+        ovAppName = top.findViewById(R.id.ovAppName)
+        val sbh = statusBarHeight()
+        top.findViewById<View>(R.id.ovStatusRow).layoutParams.height = sbh
+        val appBar = (44 * resources.displayMetrics.density).toInt()
         try {
-            wm.addView(top, params(Gravity.TOP, statusBarHeight()))
+            // Cover the status bar + the app's action/title bar with the app name.
+            wm.addView(top, params(Gravity.TOP, sbh + appBar))
             wm.addView(bottom, params(Gravity.BOTTOM, WindowManager.LayoutParams.WRAP_CONTENT))
             topView = top; bottomView = bottom
         } catch (_: Exception) { /* overlay permission missing */ }
@@ -95,7 +106,39 @@ class OverlayBarsService : Service() {
         val v = if (hidden) View.GONE else View.VISIBLE
         topView?.visibility = v
         bottomView?.visibility = v
+        handler.removeCallbacks(poller)
+        if (!hidden) { updateAppName(); handler.postDelayed(poller, POLL_MS) }
     }
+
+    private val poller = object : Runnable {
+        override fun run() {
+            updateAppName()
+            handler.postDelayed(this, POLL_MS)
+        }
+    }
+
+    private fun updateAppName() {
+        val pkg = currentApp() ?: return
+        if (pkg == packageName) return   // our launcher; overlay is hidden then anyway
+        ovAppName.text = labelOf(pkg)
+    }
+
+    private fun currentApp(): String? {
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
+        val now = System.currentTimeMillis()
+        val events = usm.queryEvents(now - 10_000, now)
+        var last: String? = null
+        val e = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e)
+            if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) last = e.packageName
+        }
+        return last
+    }
+
+    private fun labelOf(pkg: String): String = try {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    } catch (_: Exception) { "" }
 
     private fun wireStatus() {
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -147,6 +190,7 @@ class OverlayBarsService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         if (instance === this) instance = null
+        handler.removeCallbacks(poller)
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
         telephony?.listen(signalListener, PhoneStateListener.LISTEN_NONE)
@@ -157,5 +201,6 @@ class OverlayBarsService : Service() {
     companion object {
         @JvmStatic
         var instance: OverlayBarsService? = null
+        private const val POLL_MS = 1500L
     }
 }

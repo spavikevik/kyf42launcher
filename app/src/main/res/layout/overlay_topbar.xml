@@ -1,53 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- System-wide status bar overlay (drawn over other apps). -->
+<!-- Over-apps top overlay: status row + current-app title row (covers the app's
+     own action/title bar). Opaque so it reads as a clean bar. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@color/overlay_bar_bg"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/overlay_bar_bg">
 
-    <ImageView
-        android:id="@+id/ovWifi"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/ovStatusRow"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="5dp"
-        android:visibility="gone"
-        android:contentDescription="@null" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
-    <ImageView
-        android:id="@+id/ovSignal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:contentDescription="@null" />
+        <ImageView
+            android:id="@+id/ovWifi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <ImageView
+            android:id="@+id/ovSignal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/ovCarrier"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/ovBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="h:mm"
+            android:format24Hour="H:mm"
+            android:textColor="@android:color/white"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <TextView
-        android:id="@+id/ovCarrier"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:id="@+id/ovAppName"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginStart="6dp"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
         android:singleLine="true"
         android:ellipsize="end"
-        android:textColor="@color/text_secondary"
-        android:textSize="11sp" />
-
-    <TextView
-        android:id="@+id/ovBattery"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:textColor="@android:color/white"
-        android:textSize="11sp" />
-
-    <TextClock
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:format12Hour="h:mm"
-        android:format24Hour="H:mm"
-        android:textColor="@android:color/white"
-        android:textSize="11sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp" />
 </LinearLayout>

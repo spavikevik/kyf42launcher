@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Debug mode: toggle secure/global dev settings (grant via adb) -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- Read the foreground app name for the overlay title row -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
 
     <application
         android:allowBackup="true"
