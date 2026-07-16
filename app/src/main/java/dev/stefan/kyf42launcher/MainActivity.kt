@@ -598,6 +598,10 @@ class MainActivity : AppCompatActivity() {
                 in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 -> {
                     event.startTracking(); return true
                 }
+                // F3/F4 = app shortcuts. Track for long-press (assign).
+                KeyEvent.KEYCODE_F3, KeyEvent.KEYCODE_F4 -> {
+                    event.startTracking(); return true
+                }
             }
             Screen.GRID -> when (keyCode) {
                 // F1 = left soft key = focus the search field (brings up the IME).
@@ -629,6 +633,10 @@ class MainActivity : AppCompatActivity() {
             assignSpeedDial(keyCode - KeyEvent.KEYCODE_0)
             return true
         }
+        if (screen == Screen.HOME && (keyCode == KeyEvent.KEYCODE_F3 || keyCode == KeyEvent.KEYCODE_F4)) {
+            assignShortcut(keyCode)
+            return true
+        }
         return super.onKeyLongPress(keyCode, event)
     }
 
@@ -637,7 +645,44 @@ class MainActivity : AppCompatActivity() {
             speedDialShort(keyCode - KeyEvent.KEYCODE_0)
             return true
         }
+        if (screen == Screen.HOME && (keyCode == KeyEvent.KEYCODE_F3 || keyCode == KeyEvent.KEYCODE_F4) && !event.isCanceled) {
+            shortcutShort(keyCode)
+            return true
+        }
         return super.onKeyUp(keyCode, event)
+    }
+
+    // --- F3/F4 app shortcuts ---
+    private fun shortcutKey(keyCode: Int) = if (keyCode == KeyEvent.KEYCODE_F3) "sc_f3" else "sc_f4"
+
+    private fun shortcutShort(keyCode: Int) {
+        val pkg = prefs.getString(shortcutKey(keyCode), null)
+        if (pkg == null) assignShortcut(keyCode)
+        else packageManager.getLaunchIntentForPackage(pkg)?.let {
+            try { startActivity(it) } catch (_: Exception) {}
+        } ?: assignShortcut(keyCode)
+    }
+
+    private fun assignShortcut(keyCode: Int) {
+        val name = if (keyCode == KeyEvent.KEYCODE_F3) "F3" else "F4"
+        showAppPicker("Assign $name to:") { app ->
+            prefs.edit().putString(shortcutKey(keyCode), app.packageName).apply()
+            android.widget.Toast.makeText(this, "$name → ${app.label}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showAppPicker(title: String, onPick: (AppInfo) -> Unit) {
+        val view = layoutInflater.inflate(R.layout.dialog_picker, null)
+        view.findViewById<TextView>(R.id.pickTitle).text = title
+        val rows = view.findViewById<LinearLayout>(R.id.pickRows)
+        val dialog = makeSheet(view)
+        apps.forEach { app ->
+            val row = sheetRow(app.label)
+            row.setOnClickListener { onPick(app); dialog.dismiss() }
+            rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
     }
 
     private fun speedDialShort(digit: Int) {
