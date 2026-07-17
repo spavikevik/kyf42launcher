@@ -80,10 +80,12 @@ class MainActivity : AppCompatActivity() {
     private var screen = Screen.HOME
     private val apps = mutableListOf<AppInfo>()        // all launchable apps
     private val gridApps = mutableListOf<AppInfo>()    // currently shown (search-filtered)
+    private val keys by lazy { KeyBindings(prefs) }    // raw keycode -> semantic role
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val colorTheme = Themes.apply(this)   // accent overlay, before inflation
+        migrateShortcutPrefs()
         setContentView(R.layout.activity_main)
         findViewById<View>(R.id.rootMain).setBackgroundResource(colorTheme.wallpaperRes)
 
@@ -637,12 +639,22 @@ class MainActivity : AppCompatActivity() {
     private fun buildSettings() {
         settingsRows.removeAllViews()
         addSettingsHeader("Shortcuts")
-        addSettingsRow("F3 key", targetLabel(prefs.getString("sc_f3", "action:recents"))) { assignShortcut(KeyEvent.KEYCODE_F3) }
-        addSettingsRow("F4 key", targetLabel(prefs.getString("sc_f4", "action:grid"))) { assignShortcut(KeyEvent.KEYCODE_F4) }
+        for (role in listOf(LauncherKey.SHORTCUT_A, LauncherKey.SHORTCUT_B)) {
+            val target = prefs.getString(shortcutPrefKey(role), shortcutDefault(role))
+            addSettingsRow(role.label, targetLabel(target)) { assignShortcut(role) }
+        }
         addSettingsHeader("Speed dial")
         for (d in 2..9) {
             val entry = prefs.getString("sd_$d", null)
             addSettingsRow("Key $d", entry?.substringAfter("|") ?: "Not set") { assignSpeedDial(d) }
+        }
+        addSettingsHeader("Input — key bindings")
+        addSettingsRow("Preset", keys.activePresetName()) { showPresetPicker() }
+        for (role in LauncherKey.values()) {
+            val code = keys.code(role)
+            addSettingsRow(role.label, if (code == null) "Not bound" else KeyBindings.keyName(code)) {
+                showKeyCapture(role)
+            }
         }
         addSettingsHeader("Appearance")
         val cur = Themes.current(this)
@@ -667,7 +679,7 @@ class MainActivity : AppCompatActivity() {
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
         val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
-        addSettingsRow("About", "KYF42 Launcher $ver") { onAboutTap() }
+        addSettingsRow("About", "${getString(R.string.app_name)} $ver") { onAboutTap() }
         if (prefs.getBoolean("debug", false)) buildDebugSection()
     }
 
@@ -903,25 +915,25 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {}
 
-    // --- KYF42 physical keys (see matrix_keypad.kl) ---
+    // --- Physical keys, resolved to semantic roles by KeyBindings ---
+    // The d-pad, number keys, and Back are universal and matched by raw keycode;
+    // the model-specific keys (soft keys, shortcuts, side button, recents) are
+    // matched through their role so any d-pad phone can be bound in Settings.
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        // Side manner button (scancode 254 -> KEYCODE_CAMERA):
-        // short press cycles profiles, long press opens the picker.
-        if (keyCode == KeyEvent.KEYCODE_CAMERA) {
-            event.startTracking()
-            return true
-        }
-        // Dedicated APP_SWITCH key (gpio-keys 63), if the system ever delivers it.
-        if (keyCode == KeyEvent.KEYCODE_APP_SWITCH) { showRecents(); return true }
+        val lk = keys.role(keyCode)
+        // Side/profile button: short press cycles profiles, long press opens the picker.
+        if (lk == LauncherKey.PROFILE) { event.startTracking(); return true }
+        // Dedicated recents key, if the phone has one.
+        if (lk == LauncherKey.RECENTS) { showRecents(); return true }
         when (screen) {
-            Screen.HOME -> when (keyCode) {
+            Screen.HOME -> when {
                 // Up from the dock steps into the carousel rail (bottom item);
                 // inside the rail Up/Down move between items (framework focus
                 // traversal), Up past the top opens the grid, Down past the
                 // bottom returns to the dock. Without the rail, Up = grid and
                 // Down = notifications. Left/right/center fall through to the
                 // focus system for dock traversal + launch.
-                KeyEvent.KEYCODE_DPAD_UP -> {
+                keyCode == KeyEvent.KEYCODE_DPAD_UP -> {
                     val f = currentFocus
                     if (f?.parent === carousel) {
                         if (carousel.indexOfChild(f) == 0) { showGrid(); return true }
@@ -931,7 +943,7 @@ class MainActivity : AppCompatActivity() {
                         return true
                     } else { showGrid(); return true }
                 }
-                KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_F1 -> {
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN || lk == LauncherKey.SOFT_LEFT -> {
                     val f = currentFocus
                     if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && f?.parent === carousel) {
                         if (carousel.indexOfChild(f) == carousel.childCount - 1) {
@@ -941,35 +953,34 @@ class MainActivity : AppCompatActivity() {
                         // inner item: let focus traversal move down the rail
                     } else { showNotifications(); return true }
                 }
-                KeyEvent.KEYCODE_F2 -> { showControl(); return true }
+                lk == LauncherKey.SOFT_RIGHT -> { showControl(); return true }
                 // Number keys 2-9 = speed dial. Track for long-press (assign).
-                in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 -> {
+                keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9 -> {
                     event.startTracking(); return true
                 }
-                // F3/F4 = app shortcuts. Track for long-press (assign).
-                KeyEvent.KEYCODE_F3, KeyEvent.KEYCODE_F4 -> {
+                // Shortcut keys A/B. Track for long-press (assign).
+                lk == LauncherKey.SHORTCUT_A || lk == LauncherKey.SHORTCUT_B -> {
                     event.startTracking(); return true
                 }
             }
-            Screen.GRID -> when (keyCode) {
-                // F1 = left soft key = focus the search field (brings up the IME).
-                KeyEvent.KEYCODE_F1 -> { gridSearch.requestFocus(); return true }
-                // F2 = right soft key = Options for the focused app.
-                KeyEvent.KEYCODE_F2 -> {
+            Screen.GRID -> when (lk) {
+                // Left soft key = focus the search field (brings up the IME).
+                LauncherKey.SOFT_LEFT -> { gridSearch.requestFocus(); return true }
+                // Right soft key = Options for the focused app.
+                LauncherKey.SOFT_RIGHT -> {
                     focusedApp()?.let { showOptions(it) }
                     return true
                 }
+                else -> {}
             }
             Screen.CONTROL -> {}   // tiles handle focus/center; Back exits (onBackPressed)
             Screen.SETTINGS -> {}  // rows handle focus/center; Back exits (onBackPressed)
-            Screen.NOTIF -> when (keyCode) {
-                KeyEvent.KEYCODE_F1 -> {   // left soft key = Clear all
-                    try { LockListenerService.instance?.cancelAllNotifications() } catch (_: Exception) {}
-                    // cancelAll is async; onChange refreshes as removals land, plus
-                    // a delayed sweep in case the last callback is missed.
-                    notifList.postDelayed({ if (screen == Screen.NOTIF) refreshNotifs() }, 250)
-                    return true
-                }
+            Screen.NOTIF -> if (lk == LauncherKey.SOFT_LEFT) {   // left soft key = Clear all
+                try { LockListenerService.instance?.cancelAllNotifications() } catch (_: Exception) {}
+                // cancelAll is async; onChange refreshes as removals land, plus
+                // a delayed sweep in case the last callback is missed.
+                notifList.postDelayed({ if (screen == Screen.NOTIF) refreshNotifs() }, 250)
+                return true
             }
         }
         return super.onKeyDown(keyCode, event)
@@ -978,20 +989,22 @@ class MainActivity : AppCompatActivity() {
     // BACK: grid -> home; on home, swallow so we never leave the launcher.
     // --- Speed dial (home number keys 2-9): short = call, long = (re)assign ---
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_CAMERA) { showProfileSheet(); return true }
+        val lk = keys.role(keyCode)
+        if (lk == LauncherKey.PROFILE) { showProfileSheet(); return true }
         if (screen == Screen.HOME && keyCode in KeyEvent.KEYCODE_2..KeyEvent.KEYCODE_9) {
             assignSpeedDial(keyCode - KeyEvent.KEYCODE_0)
             return true
         }
-        if (screen == Screen.HOME && (keyCode == KeyEvent.KEYCODE_F3 || keyCode == KeyEvent.KEYCODE_F4)) {
-            assignShortcut(keyCode)
+        if (screen == Screen.HOME && (lk == LauncherKey.SHORTCUT_A || lk == LauncherKey.SHORTCUT_B)) {
+            assignShortcut(lk)
             return true
         }
         return super.onKeyLongPress(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_CAMERA && !event.isCanceled) {
+        val lk = keys.role(keyCode)
+        if (lk == LauncherKey.PROFILE && !event.isCanceled) {
             toast("Profile: " + Ringer.cycle(this))
             if (screen == Screen.CONTROL) control.refresh()
             return true
@@ -1000,15 +1013,19 @@ class MainActivity : AppCompatActivity() {
             speedDialShort(keyCode - KeyEvent.KEYCODE_0)
             return true
         }
-        if (screen == Screen.HOME && (keyCode == KeyEvent.KEYCODE_F3 || keyCode == KeyEvent.KEYCODE_F4) && !event.isCanceled) {
-            shortcutShort(keyCode)
+        if (screen == Screen.HOME && (lk == LauncherKey.SHORTCUT_A || lk == LauncherKey.SHORTCUT_B) && !event.isCanceled) {
+            shortcutShort(lk)
             return true
         }
         return super.onKeyUp(keyCode, event)
     }
 
-    // --- F3/F4 shortcuts (target = a package name or an "action:" token) ---
-    private fun shortcutKey(keyCode: Int) = if (keyCode == KeyEvent.KEYCODE_F3) "sc_f3" else "sc_f4"
+    // --- Shortcut keys A/B (target = a package name or an "action:" token) ---
+    private fun shortcutPrefKey(role: LauncherKey) = "sc_${role.name}"
+
+    // A defaults to the recents switcher; B to the app grid.
+    private fun shortcutDefault(role: LauncherKey) =
+        if (role == LauncherKey.SHORTCUT_A) "action:recents" else "action:grid"
 
     // Built-in launcher actions selectable as a shortcut target.
     private val shortcutActions = listOf(
@@ -1019,11 +1036,19 @@ class MainActivity : AppCompatActivity() {
         "action:settings" to "Settings"
     )
 
-    private fun shortcutShort(keyCode: Int) {
-        // F4 defaults to the app grid; F3 to the recents switcher.
-        val default = if (keyCode == KeyEvent.KEYCODE_F4) "action:grid" else "action:recents"
-        val target = prefs.getString(shortcutKey(keyCode), default) ?: default
-        runShortcut(target) { assignShortcut(keyCode) }
+    /** One-time: carry the old F3/F4 shortcut assignments onto the new role keys. */
+    private fun migrateShortcutPrefs() {
+        if (prefs.getBoolean("kb_migrated", false)) return
+        val e = prefs.edit()
+        prefs.getString("sc_f3", null)?.let { e.putString(shortcutPrefKey(LauncherKey.SHORTCUT_A), it) }
+        prefs.getString("sc_f4", null)?.let { e.putString(shortcutPrefKey(LauncherKey.SHORTCUT_B), it) }
+        e.putBoolean("kb_migrated", true).apply()
+    }
+
+    private fun shortcutShort(role: LauncherKey) {
+        val target = prefs.getString(shortcutPrefKey(role), shortcutDefault(role))
+            ?: shortcutDefault(role)
+        runShortcut(target) { assignShortcut(role) }
     }
 
     private fun runShortcut(target: String, onMissing: () -> Unit) {
@@ -1039,11 +1064,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun assignShortcut(keyCode: Int) {
-        val name = if (keyCode == KeyEvent.KEYCODE_F3) "F3" else "F4"
-        showShortcutPicker("Assign $name to:") { token, label ->
-            prefs.edit().putString(shortcutKey(keyCode), token).apply()
-            android.widget.Toast.makeText(this, "$name → $label", android.widget.Toast.LENGTH_SHORT).show()
+    private fun assignShortcut(role: LauncherKey) {
+        showShortcutPicker("Assign ${role.label} to:") { token, label ->
+            prefs.edit().putString(shortcutPrefKey(role), token).apply()
+            android.widget.Toast.makeText(this, "${role.label} → $label", android.widget.Toast.LENGTH_SHORT).show()
             if (screen == Screen.SETTINGS) buildSettings()
         }
     }
@@ -1065,6 +1089,67 @@ class MainActivity : AppCompatActivity() {
             val row = sheetRow(app.label)
             row.setOnClickListener { onPick(app.packageName, app.label); dialog.dismiss() }
             rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
+    }
+
+    // --- Key bindings: preset picker + learn-mode capture -------------------
+    private fun showPresetPicker() {
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Key preset"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+        KeyBindings.PRESETS.keys.forEach { name ->
+            val row = sheetRow(name, accent = name == keys.activePresetName())
+            row.setOnClickListener {
+                keys.applyPreset(name)              // clears per-role overrides
+                toast("Preset: $name")
+                dialog.dismiss()
+                if (screen == Screen.SETTINGS) buildSettings()
+            }
+            rows.addView(row)
+        }
+        dialog.show()
+        rows.getChildAt(0)?.requestFocus()
+    }
+
+    /**
+     * Learn-mode: capture whatever raw keycode the phone delivers and bind it to [role].
+     * Reserved navigation keys (d-pad, number keys, Back) are let through so the sheet's
+     * own rows stay usable; any other key is captured. Works on any d-pad phone.
+     */
+    private fun showKeyCapture(role: LauncherKey) {
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = "Press the key for “${role.label}”"
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val dialog = makeSheet(view)
+
+        sheetRow("Clear binding", accent = true).also { r ->
+            r.setOnClickListener {
+                keys.bind(role, null)
+                toast("${role.label}: cleared")
+                dialog.dismiss()
+                if (screen == Screen.SETTINGS) buildSettings()
+            }
+            rows.addView(r)
+        }
+        sheetRow("Cancel", accent = true).also { r ->
+            r.setOnClickListener { dialog.dismiss() }
+            rows.addView(r)
+        }
+
+        dialog.setOnKeyListener { _, code, ev ->
+            if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            // Back cancels; reserved keys fall through so the rows above stay operable.
+            if (code == KeyEvent.KEYCODE_BACK || KeyBindings.isReserved(code)) {
+                return@setOnKeyListener false
+            }
+            keys.bind(role, code)
+            toast("${role.label} → ${KeyBindings.keyName(code)}")
+            dialog.dismiss()
+            if (screen == Screen.SETTINGS) buildSettings()
+            true
         }
         dialog.show()
         rows.getChildAt(0)?.requestFocus()
