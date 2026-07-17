@@ -36,6 +36,7 @@ class OverlayBarsService : Service() {
 
     private lateinit var wm: WindowManager
     private var topView: View? = null
+    private var probeView: View? = null
 
     private lateinit var ovWifi: ImageView
     private lateinit var ovSignal: ImageView
@@ -99,6 +100,22 @@ class OverlayBarsService : Service() {
             wm.addView(top, params(Gravity.TOP, sbh + appBar))
             topView = top
         } catch (_: Exception) { /* overlay permission missing */ }
+
+        // Invisible 1px detector window WITHOUT FLAG_LAYOUT_IN_SCREEN: the window
+        // manager lays it out inside the content area, so its top sits at the
+        // status-bar height when the bar is showing, and at 0 when the foreground
+        // app is fullscreen/immersive. Used by isImmersive().
+        try {
+            val probe = View(this)
+            val pp = WindowManager.LayoutParams(
+                1, 1, overlayType(),
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSPARENT
+            ).apply { gravity = Gravity.TOP or Gravity.START }
+            wm.addView(probe, pp)
+            probeView = probe
+        } catch (_: Exception) { /* overlay permission missing */ }
     }
 
     /**
@@ -118,18 +135,35 @@ class OverlayBarsService : Service() {
 
     private val poller = object : Runnable {
         override fun run() {
-            // null = no recent foreground event; keep current state.
             currentApp()?.let { pkg ->
-                if (pkg == packageName) {
-                    ovAppName.text = ""
-                    setVisible(false)
-                } else {
-                    ovAppName.text = labelOf(pkg)
-                    setVisible(true)
+                when {
+                    // Our own launcher/lock: they draw their own bars.
+                    pkg == packageName -> { ovAppName.text = ""; setVisible(false) }
+                    // Fullscreen/immersive app (video, games, camera) hides the
+                    // system status bar; stay out of its way rather than float on top.
+                    isImmersive() -> setVisible(false)
+                    else -> { ovAppName.text = labelOf(pkg); setVisible(true) }
                 }
+            } ?: run {
+                // No fresh foreground event: still retreat if the app went immersive.
+                if (isImmersive()) setVisible(false)
             }
             handler.postDelayed(this, POLL_MS)
         }
+    }
+
+    // The foreground app is fullscreen/immersive when it has hidden the system
+    // status bar — our overlay window then reports a zero top inset. (API 23+;
+    // below that rootWindowInsets is null and we keep showing, as before.)
+    // Our main bar uses FLAG_LAYOUT_IN_SCREEN and is decor-agnostic, so it can't
+    // see the status bar. The probe window (no LAYOUT_IN_SCREEN) instead sits at the
+    // status-bar height when the bar is showing and at 0 when the foreground app has
+    // gone fullscreen/immersive — that's our signal to stay out of the way.
+    private fun isImmersive(): Boolean {
+        val v = probeView ?: return false
+        val loc = IntArray(2)
+        v.getLocationOnScreen(loc)
+        return loc[1] < statusBarHeight() / 2
     }
 
     private fun currentApp(): String? {
@@ -208,6 +242,7 @@ class OverlayBarsService : Service() {
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
         telephony?.listen(signalListener, PhoneStateListener.LISTEN_NONE)
         try { topView?.let { wm.removeView(it) } } catch (_: Exception) {}
+        try { probeView?.let { wm.removeView(it) } } catch (_: Exception) {}
     }
 
     companion object {
