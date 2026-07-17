@@ -101,10 +101,12 @@ class OverlayBarsService : Service() {
             topView = top
         } catch (_: Exception) { /* overlay permission missing */ }
 
-        // Invisible 1px detector window WITHOUT FLAG_LAYOUT_IN_SCREEN: the window
-        // manager lays it out inside the content area, so its top sits at the
-        // status-bar height when the bar is showing, and at 0 when the foreground
-        // app is fullscreen/immersive. Used by isImmersive().
+        // Invisible 1px detector window WITHOUT FLAG_LAYOUT_IN_SCREEN, pinned to the
+        // bottom: the window manager lays it out inside the content area, so it sits
+        // just above the nav bar normally and drops to the very bottom when the
+        // foreground app hides the nav bar (full-immersive). Used by isImmersive().
+        // (We key off the nav bar, not the status bar, because the launcher hides the
+        // status bar system-wide via policy_control so our overlay owns the top.)
         try {
             val probe = View(this)
             val pp = WindowManager.LayoutParams(
@@ -112,7 +114,7 @@ class OverlayBarsService : Service() {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 PixelFormat.TRANSPARENT
-            ).apply { gravity = Gravity.TOP or Gravity.START }
+            ).apply { gravity = Gravity.BOTTOM or Gravity.START }
             wm.addView(probe, pp)
             probeView = probe
         } catch (_: Exception) { /* overlay permission missing */ }
@@ -155,15 +157,23 @@ class OverlayBarsService : Service() {
     // The foreground app is fullscreen/immersive when it has hidden the system
     // status bar — our overlay window then reports a zero top inset. (API 23+;
     // below that rootWindowInsets is null and we keep showing, as before.)
-    // Our main bar uses FLAG_LAYOUT_IN_SCREEN and is decor-agnostic, so it can't
-    // see the status bar. The probe window (no LAYOUT_IN_SCREEN) instead sits at the
-    // status-bar height when the bar is showing and at 0 when the foreground app has
-    // gone fullscreen/immersive — that's our signal to stay out of the way.
+    // Full-immersive = the foreground app has hidden the nav bar. The bottom probe
+    // (no LAYOUT_IN_SCREEN) sits above the nav bar normally and drops to the screen
+    // bottom when the nav bar is gone; a near-zero gap means immersive -> hide bars.
     private fun isImmersive(): Boolean {
         val v = probeView ?: return false
         val loc = IntArray(2)
         v.getLocationOnScreen(loc)
-        return loc[1] < statusBarHeight() / 2
+        val real = android.graphics.Point()
+        @Suppress("DEPRECATION") wm.defaultDisplay.getRealSize(real)
+        val gap = real.y - (loc[1] + v.height)
+        return gap < navBarHeight() / 2
+    }
+
+    private fun navBarHeight(): Int {
+        val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id)
+        else (48 * resources.displayMetrics.density).toInt()
     }
 
     private fun currentApp(): String? {

@@ -164,6 +164,16 @@ class MainActivity : AppCompatActivity() {
             android.provider.Settings.canDrawOverlays(this)
         val intent = Intent(this, OverlayBarsService::class.java)
         if (on) startService(intent) else stopService(intent)
+        setStockStatusBarHidden(on)
+    }
+
+    // Hide the system status bar over other apps (semi-immersive), so our overlay
+    // bar is the only top bar — otherwise both stack and their status rows collide.
+    // Needs WRITE_SECURE_SETTINGS. Cleared (stock bar returns) when the feature is off.
+    private fun setStockStatusBarHidden(hidden: Boolean) = putSecureGlobal {
+        android.provider.Settings.Global.putString(
+            contentResolver, "policy_control", if (hidden) "immersive.status=*" else null
+        )
     }
 
     private val screenOffReceiver = object : BroadcastReceiver() {
