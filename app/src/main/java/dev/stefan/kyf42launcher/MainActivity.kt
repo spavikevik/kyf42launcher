@@ -289,7 +289,7 @@ class MainActivity : AppCompatActivity() {
     // (unlike WifiManager.getConnectionInfo(), which Android 10 redacts).
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && hasInternet(caps)
             runOnUiThread {
                 if (onWifi) {
                     ivWifi.setImageResource(WIFI_ICONS[wifiLevel(caps)])
@@ -308,6 +308,13 @@ class MainActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         return WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
     }
+
+    // Real internet, not just AP association: a captive-portal wifi (common public
+    // hotspot) is linked but has no connectivity until you sign in. VALIDATED is
+    // API 23+; below that, fall back to treating association as connected.
+    private fun hasInternet(caps: NetworkCapabilities): Boolean =
+        android.os.Build.VERSION.SDK_INT < 23 ||
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
 
     private fun setupStatusBar() {

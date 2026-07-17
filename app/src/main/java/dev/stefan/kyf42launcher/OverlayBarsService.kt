@@ -182,7 +182,11 @@ class OverlayBarsService : Service() {
 
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            // Require validated internet, not just AP association — a captive-portal
+            // wifi is linked but offline until sign-in. VALIDATED is API 23+.
+            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+                (Build.VERSION.SDK_INT < 23 ||
+                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
             ovWifi.post {
                 if (onWifi) {
                     val dbm = caps.signalStrength

@@ -83,7 +83,11 @@ class LockActivity : AppCompatActivity() {
 
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            // Validated internet only — a captive-portal wifi is linked but offline
+            // until sign-in. VALIDATED is API 23+; below that treat linked as online.
+            val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+                (Build.VERSION.SDK_INT < 23 ||
+                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
             runOnUiThread {
                 if (onWifi) {
                     val dbm = caps.signalStrength
