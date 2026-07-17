@@ -10,6 +10,11 @@ captures/
 # Local machine config (contains sdk.dir)
 local.properties
 
+# Release signing secrets — never commit
+keystore.properties
+*.keystore
+*.jks
+
 # IDE
 .idea/
 *.iml

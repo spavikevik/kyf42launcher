@@ -69,3 +69,12 @@ adb shell cmd package set-home-activity jp.kyocera.afphome/.homemain.HomeMainAct
 - Soft-key "Options" menu (app info / uninstall).
 - Configurable dock favorites.
 - Notification icons in the status bar (NotificationListenerService).
+
+## Building
+
+Needs JDK 17 (Gradle 8.13 rejects newer JDKs). Debug APK: `./gradlew assembleDebug`.
+For the signed, installable release APK see [RELEASE.md](RELEASE.md).
+
+## License
+
+BSD 3-Clause — see [LICENSE](LICENSE).
