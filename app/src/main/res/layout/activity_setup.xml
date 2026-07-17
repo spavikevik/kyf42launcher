@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- First-run setup wizard. Same visual language as home: wallpaper + glass,
+     accent highlights. Fully D-pad navigable — never depends on a soft key,
+     since soft keys aren't bound yet on the first run. -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootSetup"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/wallpaper">
+
+    <!-- Scrim so white type stays legible over any wallpaper. -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/grid_scrim" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="12dp">
+
+        <!-- Progress dots (populated in code). -->
+        <LinearLayout
+            android:id="@+id/setupDots"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:layout_marginBottom="14dp" />
+
+        <TextView
+            android:id="@+id/setupTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="21sp"
+            android:textStyle="bold"
+            android:letterSpacing="-0.01" />
+
+        <TextView
+            android:id="@+id/setupSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:lineSpacingMultiplier="1.1" />
+
+        <!-- Step body: dynamic rows, scrollable if tall. -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/setupContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <!-- Bottom nav: Back + Next/Finish. Both focusable, reachable by D-pad. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/setupBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:text="Back"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:focusable="true"
+                android:background="@drawable/opt_row_bg" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/setupNext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="22dp"
+                android:paddingEnd="22dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:text="Next"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:focusable="true"
+                android:background="@drawable/setup_next_bg" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

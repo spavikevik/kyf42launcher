@@ -86,6 +86,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val colorTheme = Themes.apply(this)   // accent overlay, before inflation
         migrateShortcutPrefs()
+        // First run: hand off to the setup wizard once home has drawn behind it.
+        if (!prefs.getBoolean("setup_done", false)) {
+            startActivity(Intent(this, SetupActivity::class.java))
+        }
         setContentView(R.layout.activity_main)
         findViewById<View>(R.id.rootMain).setBackgroundResource(colorTheme.wallpaperRes)
 
@@ -677,6 +681,7 @@ class MainActivity : AppCompatActivity() {
         }
         addSettingsRow("Notification access", null) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
+        addSettingsRow("Run setup wizard", null) { startActivity(Intent(this, SetupActivity::class.java)) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
         val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
         addSettingsRow("About", "${getString(R.string.app_name)} $ver") { onAboutTap() }

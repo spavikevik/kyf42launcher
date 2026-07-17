@@ -45,6 +45,14 @@
         </activity>
 
         <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:stateNotNeeded="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|navigation|orientation|screenSize"
+            android:theme="@style/Theme.KYF42Launcher" />
+
+        <activity
             android:name=".LockActivity"
             android:exported="false"
             android:launchMode="singleInstance"
