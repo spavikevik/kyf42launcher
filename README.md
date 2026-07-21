@@ -8,14 +8,24 @@ no-touchscreen device: TV launchers lock landscape, phone launchers assume touch
 ## Features
 
 - Portrait-locked (fixes the landscape rotation of TV launchers).
-- Clock/date home screen over a generated aurora wallpaper.
-- Favorites **dock** (Phone / Messages / Contacts / Camera / Browser, resolved
-  from system defaults) + an **All apps** tile.
-- Full app **grid** (3 columns), D-pad focus navigation, KaiOS blue selection ring.
+- Clock/date home screen over a generated wallpaper, with an info card:
+  weather (Open-Meteo, no API key), next calendar event, next alarm.
+- Configurable favorites **dock** (defaults resolved from system apps) + an
+  **All apps** tile.
+- Full app **grid** (3 columns), D-pad focus navigation, KaiOS blue selection
+  ring, keypad search, soft-key **Options** menu (app info / uninstall / dock).
 - Custom **status bar**: WiFi bars (via `ConnectivityManager`, no location perm),
-  cellular signal / "No SIM", battery %, clock.
+  cellular signal / "No SIM", battery %, clock — also drawn **over other apps**
+  as an overlay (auto-hides in fullscreen/immersive apps).
+- **Lock screen** (KaiOS/iOS-style; hands off to the real keyguard when a
+  system PIN is set) and a **control center** (torch, brightness, ringer/DND,
+  bluetooth).
+- **Notification panel** backed by a `NotificationListenerService`.
+- Color **themes** (accent + wallpaper pairs) and a first-run **setup wizard**.
+- Semantic **key bindings** layer — any D-pad phone can be mapped, not just the
+  KYF42.
 - Hidden system nav + status bars (immersive).
-- Orange soft-key bar (SELECT / Options).
+- App grid refreshes live on package install/remove/update.
 
 ## Device key map (`/system/usr/keylayout/matrix_keypad.kl`)
 
@@ -31,13 +41,15 @@ There is **no HOME keycode** — "home" is reached via Back / closing the flip.
 
 ## Build
 
-Requires JDK 17, Android SDK (build-tools 34, platform 34). Wrapper pins Gradle 8.9.
+Requires JDK 17, Android SDK (platform 36). Wrapper pins Gradle 9.2.1 (AGP 9.0).
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 ./gradlew assembleDebug
 ```
+
+For the signed, installable release APK see [RELEASE.md](RELEASE.md).
 
 ## Install + set as home
 
@@ -62,18 +74,6 @@ adb shell cmd package set-home-activity jp.kyocera.afphome/.homemain.HomeMainAct
   before `ViewRootImpl` runs focus traversal — the launcher only consumes keys it uses.
 - Framebuffer capture (`screencap`) returns blank on this device; verify on-device or
   via `uiautomator dump`.
-
-## Roadmap
-
-- T9 search on the grid (digit keys already mapped).
-- Soft-key "Options" menu (app info / uninstall).
-- Configurable dock favorites.
-- Notification icons in the status bar (NotificationListenerService).
-
-## Building
-
-Needs JDK 17 (Gradle 8.13 rejects newer JDKs). Debug APK: `./gradlew assembleDebug`.
-For the signed, installable release APK see [RELEASE.md](RELEASE.md).
 
 ## License
 

@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.app.Notification
 import android.content.BroadcastReceiver
@@ -345,11 +346,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Real internet, not just AP association: a captive-portal wifi (common public
-    // hotspot) is linked but has no connectivity until you sign in. VALIDATED is
-    // API 23+; below that, fall back to treating association as connected.
+    // hotspot) is linked but has no connectivity until you sign in.
     private fun hasInternet(caps: NetworkCapabilities): Boolean =
-        android.os.Build.VERSION.SDK_INT < 23 ||
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
 
     private fun setupStatusBar() {
@@ -1256,6 +1255,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         // In the grid: Back first clears an active search, then exits to home.
         if (screen == Screen.GRID && gridSearch.text.isNotEmpty()) {

@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.annotation.SuppressLint
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
@@ -365,6 +366,7 @@ class SetupActivity : AppCompatActivity() {
     }
 
     @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         if (capturing != null) { cancelCapture(); return }
         if (index > 0) goBack()   // first step: stay in setup

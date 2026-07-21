@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.annotation.SuppressLint
 import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
@@ -13,7 +14,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -59,15 +59,11 @@ class OverlayBarsService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
-    private fun overlayType(): Int =
-        if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
-
     private fun params(gravity: Int, height: Int): WindowManager.LayoutParams =
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             height,
-            overlayType(),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -110,7 +106,7 @@ class OverlayBarsService : Service() {
         try {
             val probe = View(this)
             val pp = WindowManager.LayoutParams(
-                1, 1, overlayType(),
+                1, 1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 PixelFormat.TRANSPARENT
@@ -227,10 +223,9 @@ class OverlayBarsService : Service() {
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             // Require validated internet, not just AP association — a captive-portal
-            // wifi is linked but offline until sign-in. VALIDATED is API 23+.
+            // wifi is linked but offline until sign-in.
             val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
-                (Build.VERSION.SDK_INT < 23 ||
-                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             ovWifi.post {
                 if (onWifi) {
                     val dbm = caps.signalStrength
@@ -256,6 +251,8 @@ class OverlayBarsService : Service() {
     }
 
     companion object {
+        // Cleared in onDestroy, so the service instance never outlives itself.
+        @SuppressLint("StaticFieldLeak")
         @JvmStatic
         var instance: OverlayBarsService? = null
         private const val POLL_MS = 350L

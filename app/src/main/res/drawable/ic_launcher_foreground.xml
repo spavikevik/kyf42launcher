@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 3x3 app-grid dots, center highlighted KaiOS blue: the launcher's grid motif. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group android:pivotX="54" android:pivotY="54">
+        <!-- top row -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M36,30 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M54,30 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M72,30 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <!-- middle row, center dot larger + blue selection ring -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M36,54 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <path android:fillColor="#00A9E0"
+            android:pathData="M54,54 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+        <path android:fillColor="#00000000"
+            android:strokeColor="#00A9E0" android:strokeWidth="2"
+            android:pathData="M54,54 m-11,0 a11,11 0 1,1 22,0 a11,11 0 1,1 -22,0" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M72,54 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <!-- bottom row -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M36,78 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M54,78 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M72,78 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+    </group>
+</vector>

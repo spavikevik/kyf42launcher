@@ -34,7 +34,7 @@ keystore and `keystore.properties` are gitignored — they are never committed.
 
 ## Build
 
-The build needs JDK 17 (Gradle 8.13 rejects newer JDKs):
+The build needs JDK 17:
 
 ```sh
 JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \

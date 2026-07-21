@@ -1,5 +1,6 @@
 package dev.stefan.kyf42launcher
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -10,12 +11,10 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.KeyEvent
 import android.view.View
-import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -38,16 +37,8 @@ class LockActivity : AppCompatActivity() {
         findViewById<View>(R.id.rootLock).setBackgroundResource(colorTheme.wallpaperRes)
 
         // Show over the keyguard and light the screen when armed.
-        if (Build.VERSION.SDK_INT >= 27) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
-                    or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
 
         // If the keyguard is dismissed by any means, drop our screen.
         registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
@@ -84,10 +75,9 @@ class LockActivity : AppCompatActivity() {
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             // Validated internet only — a captive-portal wifi is linked but offline
-            // until sign-in. VALIDATED is API 23+; below that treat linked as online.
+            // until sign-in.
             val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
-                (Build.VERSION.SDK_INT < 23 ||
-                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             runOnUiThread {
                 if (onWifi) {
                     val dbm = caps.signalStrength
@@ -155,7 +145,7 @@ class LockActivity : AppCompatActivity() {
         val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         // If a secure system lock is set, hand off to the REAL keyguard prompt
         // (system PIN). Security stays in the OS; our screen is just the entry.
-        if (Build.VERSION.SDK_INT >= 26 && km?.isKeyguardLocked == true && km.isDeviceSecure) {
+        if (km?.isKeyguardLocked == true && km.isDeviceSecure) {
             setChrome(View.INVISIBLE)   // hide our clock/status so the PIN screen isn't doubled
             km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
                 override fun onDismissSucceeded() = dismissToHome()
@@ -182,6 +172,7 @@ class LockActivity : AppCompatActivity() {
     }
 
     @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall")
     override fun onBackPressed() { /* locked: ignore */ }
 
     override fun onDestroy() {

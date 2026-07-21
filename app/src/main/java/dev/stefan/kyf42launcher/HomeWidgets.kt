@@ -6,12 +6,10 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.os.Build
 import android.provider.CalendarContract
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -63,7 +61,6 @@ class HomeWidgets(
     }
 
     // --- Next calendar event in the next 36h ---
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun updateCalendar() {
         if (activity.checkSelfPermission(Manifest.permission.READ_CALENDAR)
             != PackageManager.PERMISSION_GRANTED
