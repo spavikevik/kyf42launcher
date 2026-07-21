@@ -77,4 +77,6 @@ adb shell cmd package set-home-activity jp.kyocera.afphome/.homemain.HomeMainAct
 
 ## License
 
-BSD 3-Clause — see [LICENSE](LICENSE).
+BSD 3-Clause — see [LICENSE](LICENSE). Third-party libraries and services are
+documented in [THIRD_PARTY.md](THIRD_PARTY.md); weather data by
+[Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0).
