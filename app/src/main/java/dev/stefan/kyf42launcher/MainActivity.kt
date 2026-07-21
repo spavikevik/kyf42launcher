@@ -725,8 +725,11 @@ class MainActivity : AppCompatActivity() {
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
         addSettingsRow("Run setup wizard", null) { startActivity(Intent(this, SetupActivity::class.java)) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
+        addSettingsHeader("About")
         val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
         addSettingsRow("About", "${getString(R.string.app_name)} $ver") { onAboutTap() }
+        addSettingsRow("Copyright & license", null) { showTextSheet("License", rawText(R.raw.license)) }
+        addSettingsRow("Third-party notices", null) { showTextSheet("Third-party notices", rawText(R.raw.third_party)) }
         if (prefs.getBoolean("debug", false)) buildDebugSection()
     }
 
@@ -893,6 +896,34 @@ class MainActivity : AppCompatActivity() {
         addSettingsRow("Disable debug mode", null) {
             prefs.edit().putBoolean("debug", false).apply(); aboutTaps = 0; buildSettings()
         }
+    }
+
+    private fun rawText(id: Int): String =
+        resources.openRawResource(id).bufferedReader().use { it.readText() }
+
+    // Long-text sheet (license/notices): one scrollable TextView instead of rows.
+    // Focusable + ScrollingMovementMethod so the d-pad scrolls the text itself.
+    private fun showTextSheet(title: String, body: String) {
+        val view = layoutInflater.inflate(R.layout.dialog_list, null)
+        view.findViewById<TextView>(R.id.listTitle).text = title
+        val rows = view.findViewById<LinearLayout>(R.id.listRows)
+        val d = resources.displayMetrics.density
+        val tv = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, (420 * d).toInt()
+            )
+            setPadding((14 * d).toInt(), (6 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+            textSize = 12f
+            typeface = android.graphics.Typeface.MONOSPACE
+            movementMethod = android.text.method.ScrollingMovementMethod()
+            isFocusable = true
+            isVerticalScrollBarEnabled = true
+            text = body
+        }
+        rows.addView(tv)
+        makeSheet(view).show()
+        tv.requestFocus()
     }
 
     private fun toast(m: String) = android.widget.Toast.makeText(this, m, android.widget.Toast.LENGTH_SHORT).show()

@@ -1,0 +1,24 @@
+All application code, icons, and wallpapers are original work by
+Stefan Pavikjevikj, licensed under the BSD 3-Clause License.
+
+Not affiliated with or endorsed by KaiOS Technologies, Kyocera,
+or KDDI.
+
+BUNDLED LIBRARIES
+
+androidx.core:core-ktx — Apache License 2.0
+androidx.appcompat:appcompat — Apache License 2.0
+androidx.recyclerview:recyclerview — Apache License 2.0
+Kotlin standard library (JetBrains) — Apache License 2.0
+
+Copies of the Apache License 2.0 are available at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+NETWORK SERVICES
+
+Weather data by Open-Meteo.com, licensed under CC BY 4.0
+(https://open-meteo.com/en/license).
+
+IP geolocation fallback by ipapi.co.
+
+Both services are optional; the launcher works fully offline.

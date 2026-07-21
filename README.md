@@ -5,6 +5,10 @@ non-touch Android 10 flip phone (Snapdragon 210 / MSM8909, armeabi-v7a, 1 GB RAM
 480×854 hdpi). Built because no third-party launcher fits a portrait, D-pad-only,
 no-touchscreen device: TV launchers lock landscape, phone launchers assume touch.
 
+> **⚠️ Very experimental software.** Built for and tested on exactly one device
+> (a KYF42). Expect rough edges, and keep adb access handy so you can revert to
+> the stock launcher if something breaks.
+
 ## Features
 
 - Portrait-locked (fixes the landscape rotation of TV launchers).
@@ -80,3 +84,5 @@ adb shell cmd package set-home-activity jp.kyocera.afphome/.homemain.HomeMainAct
 BSD 3-Clause — see [LICENSE](LICENSE). Third-party libraries and services are
 documented in [THIRD_PARTY.md](THIRD_PARTY.md); weather data by
 [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0).
+
+Not affiliated with or endorsed by KaiOS Technologies, Kyocera, or KDDI.
