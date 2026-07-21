@@ -2,7 +2,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 // Release signing is read from keystore.properties at the project root (gitignored).
@@ -15,11 +14,13 @@ val keystoreProps = Properties().apply {
 
 android {
     namespace = "dev.stefan.kyf42launcher"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.stefan.kyf42launcher"
-        minSdk = 21
+        // The KYF42 runs Android 10; status-bar code calls API 29 (e.g.
+        // NetworkCapabilities#getSignalStrength) unguarded, so 29 is the floor.
+        minSdk = 29
         //noinspection ExpiredTargetSdkVersion
         targetSdk = 29
         versionCode = 1
@@ -49,13 +50,16 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    // 1.19.0 requires compileSdk 37, beyond AGP 9.0's supported max of 36.
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
 }
