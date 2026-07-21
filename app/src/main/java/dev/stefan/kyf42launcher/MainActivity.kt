@@ -154,6 +154,15 @@ class MainActivity : AppCompatActivity() {
 
         // Screen off -> pre-arm our (cosmetic) lock screen for non-secure devices.
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+
+        // App install/remove/update -> refresh the grid live (data scheme is required
+        // for the PACKAGE_* actions to be delivered).
+        registerReceiver(packageReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        })
         applyLockWallpaperOnce()
         updateOverlayBars()
     }
@@ -188,6 +197,22 @@ class MainActivity : AppCompatActivity() {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
             } catch (_: Exception) { /* BAL denied: system keyguard handles it */ }
+        }
+    }
+
+    // Keep the app grid in sync when apps are installed/removed/updated. loadApps()
+    // only runs at startup, so without this a freshly installed app (e.g. a new SMS
+    // client) stays invisible until the launcher restarts. Context-registered so it
+    // receives the PACKAGE_* broadcasts, which manifest receivers no longer get.
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // Our own updates don't change the launchable set (we hide ourselves).
+            if (intent.data?.schemeSpecificPart == packageName) return
+            loadApps()
+            // loadApps() resets the grid to the full list; restore an active search
+            // filter so an install landing mid-search doesn't clear the query view.
+            val query = gridSearch.text?.toString().orEmpty()
+            if (query.isNotEmpty()) applySearch(query)
         }
     }
 
@@ -356,6 +381,7 @@ class MainActivity : AppCompatActivity() {
         LockListenerService.onChange = null
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(screenOffReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(packageReceiver) } catch (_: Exception) {}
         try { connectivity?.unregisterNetworkCallback(netCallback) } catch (_: Exception) {}
         telephony?.listen(signalListener, PhoneStateListener.LISTEN_NONE)
     }
