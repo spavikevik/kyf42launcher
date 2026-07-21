@@ -9,6 +9,11 @@ no-touchscreen device: TV launchers lock landscape, phone launchers assume touch
 > (a KYF42). Expect rough edges, and keep adb access handy so you can revert to
 > the stock launcher if something breaks.
 
+<p align="center">
+  <img src="docs/screenshots/home.png" width="240" alt="Home screen: clock, recents carousel, dock" />
+  <img src="docs/screenshots/grid.png" width="240" alt="App grid with search and D-pad focus ring (sakura theme)" />
+</p>
+
 ## Features
 
 - Portrait-locked (fixes the landscape rotation of TV launchers).
