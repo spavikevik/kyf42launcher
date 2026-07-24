@@ -35,7 +35,10 @@ class ControlCenter(
         }
         addTile(R.drawable.ic_bright, "Brightness", { cycleBrightness() }) { "${brightnessPct()}%" }
         addTile(R.drawable.ic_ringer, "Profile", { cycleRinger() }) { ringerLabel() }
-        addTile(R.drawable.ic_wifi_settings, "Wi-Fi", { openPanel(Settings.Panel.ACTION_WIFI) }) { onOff(wifiOn()) }
+        // Settings.Panel exists only on API 29+; older releases get the full wifi screen.
+        val wifiAction = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q)
+            Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS
+        addTile(R.drawable.ic_wifi_settings, "Wi-Fi", { openPanel(wifiAction) }) { onOff(wifiOn()) }
         addTile(R.drawable.ic_bt, "Bluetooth", { open(Settings.ACTION_BLUETOOTH_SETTINGS) }) { onOff(btOn()) }
         addTile(R.drawable.ic_air, "Airplane", { open(Settings.ACTION_AIRPLANE_MODE_SETTINGS) }) { onOff(airplaneOn()) }
         addTile(R.drawable.ic_settings, "Settings", { onSettings() }) { "" }

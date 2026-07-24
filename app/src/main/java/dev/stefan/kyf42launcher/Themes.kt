@@ -3,6 +3,7 @@ package dev.stefan.kyf42launcher
 import android.app.Activity
 import android.content.Context
 import android.util.TypedValue
+import androidx.core.content.edit
 
 /** One selectable color theme: accent overlay + matching mesh wallpaper. */
 data class LauncherTheme(
@@ -40,10 +41,10 @@ object Themes {
     }
 
     fun select(ctx: Context, key: String) {
-        ctx.getSharedPreferences("kyf42", Context.MODE_PRIVATE).edit()
-            .putString("theme", key)
-            .putBoolean("lock_wp_set", false)   // re-sync the system lock wallpaper
-            .apply()
+        ctx.getSharedPreferences("kyf42", Context.MODE_PRIVATE).edit {
+            putString("theme", key)
+                .putBoolean("lock_wp_set", false)   // re-sync the system lock wallpaper
+        }
     }
 
     /** Resolved accent for code that colors views programmatically. */

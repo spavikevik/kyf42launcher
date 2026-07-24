@@ -14,13 +14,11 @@ val keystoreProps = Properties().apply {
 
 android {
     namespace = "dev.stefan.kyf42launcher"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.stefan.kyf42launcher"
-        // The KYF42 runs Android 10; status-bar code calls API 29 (e.g.
-        // NetworkCapabilities#getSignalStrength) unguarded, so 29 is the floor.
-        minSdk = 29
+        minSdk = 26
         //noinspection ExpiredTargetSdkVersion
         targetSdk = 29
         versionCode = 1
@@ -58,8 +56,10 @@ android {
 }
 
 dependencies {
-    // 1.19.0 requires compileSdk 37, beyond AGP 9.0's supported max of 36.
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16")
 }

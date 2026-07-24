@@ -19,6 +19,7 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import androidx.core.view.isVisible
 
 /** Populates the home info card: next alarm, next calendar event, weather. */
 class HomeWidgets(
@@ -41,9 +42,7 @@ class HomeWidgets(
     }
 
     private fun updateCardVisibility() {
-        val any = rowWeather.visibility == View.VISIBLE ||
-            rowEvent.visibility == View.VISIBLE ||
-            rowAlarm.visibility == View.VISIBLE
+        val any = rowWeather.isVisible || rowEvent.isVisible || rowAlarm.isVisible
         card.visibility = if (any) View.VISIBLE else View.GONE
     }
 
