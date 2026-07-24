@@ -7,6 +7,7 @@ import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.provider.Settings
 import android.view.LayoutInflater
@@ -83,7 +84,14 @@ class ControlCenter(
     // --- Brightness: cycle 25/50/75/100 (needs WRITE_SETTINGS) ---
     private fun cycleBrightness() {
         if (!Settings.System.canWrite(a)) {
-            open(Settings.ACTION_MANAGE_WRITE_SETTINGS); return
+            // Without the package URI this lands on the full app list, which reads
+            // as the tile misfiring rather than asking for a grant.
+            android.widget.Toast.makeText(
+                a, "Allow 'Modify system settings' to change brightness",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            open(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${a.packageName}"))
+            return
         }
         val levels = intArrayOf(64, 128, 191, 255)
         val cur = brightness()
@@ -108,8 +116,13 @@ class ControlCenter(
     private fun airplaneOn(): Boolean =
         Settings.Global.getInt(a.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
 
-    private fun open(action: String) =
-        try { a.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+    private fun open(action: String, data: Uri? = null) =
+        try {
+            a.startActivity(
+                Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .also { if (data != null) it.data = data }
+            )
+        } catch (_: Exception) {}
     private fun openPanel(action: String) = open(action)
 }
 

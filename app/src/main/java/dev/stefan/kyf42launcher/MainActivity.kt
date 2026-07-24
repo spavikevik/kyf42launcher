@@ -33,6 +33,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import dev.stefan.kyf42launcher.utils.Permissions
 import dev.stefan.kyf42launcher.utils.WifiLevel
 
 /** One launchable app. */
@@ -237,6 +238,12 @@ class MainActivity : AppCompatActivity() {
     private val DOCK_MAX = 5
     private val REQ_PICK_CONTACT = 42
 
+    // Mirrors item_dock.xml; used to work out how far the dock can shrink.
+    private val DOCK_ICON_DP = 32
+    private val DOCK_TILE_PADDING_DP = 5
+    private val DOCK_TILE_MARGIN_DP = 3
+    private val DOCK_EDGE_MARGIN_DP = 6
+
     private fun buildDock() {
         dock.removeAllViews()
         dockPkgs.clear()
@@ -253,6 +260,29 @@ class MainActivity : AppCompatActivity() {
         }
         // Always present: open the full app grid.
         addDockTile(getDrawable(R.drawable.ic_apps), "Apps") { showGrid() }
+        fitDockToWidth()
+    }
+
+    // The dock is a row of wrap_content tiles, so it cannot shrink on its own:
+    // at their natural size a full six-tile dock overflows a 320dp screen, and
+    // even five tiles overflow a 240dp one, silently clipping the last tile.
+    // Shrink the icons just enough to fit; docks that already fit are untouched.
+    private fun fitDockToWidth() {
+        val n = dock.childCount
+        if (n == 0) return
+        val d = resources.displayMetrics.density
+        val available = resources.displayMetrics.widthPixels -
+            (2 * DOCK_EDGE_MARGIN_DP * d).toInt() - dock.paddingLeft - dock.paddingRight
+        // Per tile the layout adds fixed chrome around the icon (padding + margins).
+        val chrome = (2 * (DOCK_TILE_PADDING_DP + DOCK_TILE_MARGIN_DP) * d).toInt()
+        val natural = (DOCK_ICON_DP * d).toInt()
+        val icon = (available / n - chrome).coerceIn(1, natural)
+        if (icon >= natural) return
+        for (i in 0 until n) {
+            dock.getChildAt(i).findViewById<ImageView>(R.id.dockIcon).apply {
+                layoutParams = layoutParams.also { it.width = icon; it.height = icon }
+            }
+        }
     }
 
     private fun addPinnedApp(pkg: String) {
@@ -719,6 +749,11 @@ class MainActivity : AppCompatActivity() {
             buildSettings()
         }
         addSettingsRow("Notification access", null) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
+        // Recents is invisible without this, and nothing else in the UI says so.
+        addSettingsRow("Usage access (recents)",
+            if (Permissions.hasUsageAccess(this)) "Granted" else "Not granted") {
+            openSetting(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        }
         addSettingsRow("Default home app", null) { openSetting(android.provider.Settings.ACTION_HOME_SETTINGS) }
         addSettingsRow("Run setup wizard", null) { startActivity(Intent(this, SetupActivity::class.java)) }
         addSettingsRow("Launcher app info", null) { openAppDetails(packageName) }
@@ -766,6 +801,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRecents() {
+        // Empty recents has two causes; only one is fixable by the user. Without
+        // usage access UsageStats returns nothing, so send them to grant it
+        // rather than mislabel it "no recent apps".
+        if (!Permissions.hasUsageAccess(this)) {
+            toast("Turn on Usage access for recent apps")
+            openSetting(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            return
+        }
         val recents = recentApps(8)
         if (recents.isEmpty()) { toast("No recent apps"); return }
         val view = layoutInflater.inflate(R.layout.dialog_list, null)
