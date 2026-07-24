@@ -55,3 +55,6 @@ jobs:
         with:
           files: app/build/outputs/apk/release/kyf42launcher-*.apk
           generate_release_notes: true
+          # Tags with a pre-release suffix (v0.2-beta, v1.0-rc1) are marked as
+          # GitHub prereleases; plain vX.Y tags publish as full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
