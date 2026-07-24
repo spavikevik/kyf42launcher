@@ -11,13 +11,16 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import dev.stefan.kyf42launcher.utils.WifiLevel
 
 /**
  * KaiOS/iOS-style lock screen. Not a real keyguard — an over-lock activity
@@ -29,6 +32,7 @@ class LockActivity : AppCompatActivity() {
     private lateinit var lockWifi: ImageView
     private lateinit var lockBattery: TextView
     private var connectivity: ConnectivityManager? = null
+    private var wifiManager: WifiManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,8 +41,16 @@ class LockActivity : AppCompatActivity() {
         findViewById<View>(R.id.rootLock).setBackgroundResource(colorTheme.wallpaperRes)
 
         // Show over the keyguard and light the screen when armed.
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
 
         // If the keyguard is dismissed by any means, drop our screen.
         registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
@@ -54,6 +66,10 @@ class LockActivity : AppCompatActivity() {
         }
 
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+        // For legacy support
+        wifiManager = getSystemService(Context.WIFI_SERVICE) as? WifiManager
+
         connectivity = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         try { connectivity?.registerDefaultNetworkCallback(netCallback) } catch (_: Exception) {}
 
@@ -80,9 +96,7 @@ class LockActivity : AppCompatActivity() {
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             runOnUiThread {
                 if (onWifi) {
-                    val dbm = caps.signalStrength
-                    val level = if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) 4
-                    else @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
+                    val level = WifiLevel.calculate(caps, wifiManager)
                     lockWifi.setImageResource(WIFI_ICONS[level])
                     lockWifi.visibility = View.VISIBLE
                 } else lockWifi.visibility = View.GONE

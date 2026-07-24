@@ -5,6 +5,8 @@ non-touch Android 10 flip phone (Snapdragon 210 / MSM8909, armeabi-v7a, 1 GB RAM
 480×854 hdpi). Built because no third-party launcher fits a portrait, D-pad-only,
 no-touchscreen device: TV launchers lock landscape, phone launchers assume touch.
 
+Supports Android 8+.
+
 > **⚠️ Very experimental software.** Built for and tested on exactly one device
 > (a KYF42). Expect rough edges, and keep adb access handy so you can revert to
 > the stock launcher if something breaks.

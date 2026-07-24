@@ -1,7 +1,6 @@
 package dev.stefan.kyf42launcher
 
 import android.annotation.SuppressLint
-import android.app.KeyguardManager
 import android.app.Notification
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -34,6 +33,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import dev.stefan.kyf42launcher.utils.WifiLevel
 
 /** One launchable app. */
 data class AppInfo(val label: String, val packageName: String, val icon: Drawable)
@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvBattery: TextView
     private var telephony: TelephonyManager? = null
     private var connectivity: ConnectivityManager? = null
+    private var wifiManager: WifiManager? = null
     private lateinit var widgets: HomeWidgets
 
     private lateinit var gridContainer: View
@@ -328,7 +329,7 @@ class MainActivity : AppCompatActivity() {
             val onWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && hasInternet(caps)
             runOnUiThread {
                 if (onWifi) {
-                    ivWifi.setImageResource(WIFI_ICONS[wifiLevel(caps)])
+                    ivWifi.setImageResource(WIFI_ICONS[WifiLevel.calculate(caps, wifiManager)])
                     ivWifi.visibility = View.VISIBLE
                 } else ivWifi.visibility = View.GONE
             }
@@ -336,13 +337,6 @@ class MainActivity : AppCompatActivity() {
         override fun onLost(network: Network) {
             runOnUiThread { ivWifi.visibility = View.GONE }
         }
-    }
-
-    private fun wifiLevel(caps: NetworkCapabilities): Int {
-        val dbm = caps.signalStrength   // API 29; may be SIGNAL_STRENGTH_UNSPECIFIED
-        if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) return 4
-        @Suppress("DEPRECATION")
-        return WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
     }
 
     // Real internet, not just AP association: a captive-portal wifi (common public
@@ -369,6 +363,9 @@ class MainActivity : AppCompatActivity() {
                 ivSignal.visibility = View.GONE   // no READ_PHONE_STATE -> hide signal
             }
         }
+
+        // For legacy support
+        wifiManager = getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
         // WiFi: bars when connected, blank otherwise (via default-network callback).
         connectivity = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -886,10 +883,11 @@ class MainActivity : AppCompatActivity() {
         addSettingsRow("Android", android.os.Build.VERSION.RELEASE) {}
         val dm = resources.displayMetrics
         addSettingsRow("Screen", "${dm.widthPixels}x${dm.heightPixels} @${dm.densityDpi}dpi") {}
-        val nm = getSystemService(android.app.NotificationManager::class.java)
+        // NotificationManager#isNotificationListenerAccessGranted is API 27; the
+        // compat helper reads the enabled-listeners setting and works on 26.
         addSettingsRow("Notification access",
-            if (nm?.isNotificationListenerAccessGranted(
-                    android.content.ComponentName(this, LockListenerService::class.java)) == true) "Granted" else "Not granted"
+            if (packageName in androidx.core.app.NotificationManagerCompat
+                    .getEnabledListenerPackages(this)) "Granted" else "Not granted"
         ) { openSetting(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
         addSettingsRow("Draw over apps",
             if (android.provider.Settings.canDrawOverlays(this)) "Granted" else "Not granted") {}

@@ -26,6 +26,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
+import dev.stefan.kyf42launcher.utils.WifiLevel
 
 /**
  * Draws the launcher's top status bar as a system overlay so it appears over
@@ -45,6 +46,7 @@ class OverlayBarsService : Service() {
     private lateinit var ovAppName: TextView
     private var telephony: TelephonyManager? = null
     private var connectivity: ConnectivityManager? = null
+    private var wifiManager: WifiManager? = null
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -201,6 +203,10 @@ class OverlayBarsService : Service() {
             try { telephony?.listen(signalListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS) }
             catch (_: SecurityException) { ovSignal.visibility = View.GONE }
         }
+
+        // For legacy support
+        wifiManager = getSystemService(Context.WIFI_SERVICE) as? WifiManager
+
         connectivity = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         try { connectivity?.registerDefaultNetworkCallback(netCallback) } catch (_: Exception) {}
     }
@@ -228,9 +234,7 @@ class OverlayBarsService : Service() {
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             ovWifi.post {
                 if (onWifi) {
-                    val dbm = caps.signalStrength
-                    val level = if (dbm == NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) 4
-                    else @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(dbm, 5).coerceIn(0, 4)
+                    val level = WifiLevel.calculate(caps, wifiManager)
                     ovWifi.setImageResource(WIFI_ICONS[level])
                     ovWifi.visibility = View.VISIBLE
                 } else ovWifi.visibility = View.GONE
