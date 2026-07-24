@@ -1,15 +1,14 @@
 package dev.stefan.kyf42launcher
 
 import android.annotation.SuppressLint
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Process
 import android.provider.Settings
+import dev.stefan.kyf42launcher.utils.Permissions
 import android.view.KeyEvent
 import android.view.View
 import android.widget.LinearLayout
@@ -229,13 +228,7 @@ class SetupActivity : AppCompatActivity() {
         return flat?.contains(packageName) == true
     }
 
-    private fun hasUsageAccess(): Boolean {
-        val ops = getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-        val mode = ops.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
+    private fun hasUsageAccess(): Boolean = Permissions.hasUsageAccess(this)
 
     private fun open(action: String, data: Uri? = null) {
         // No NEW_TASK: keep it in our task so Back returns here and onResume re-ticks.
